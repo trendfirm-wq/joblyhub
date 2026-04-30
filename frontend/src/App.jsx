@@ -47,8 +47,8 @@ import Contact from './pages/Contact';
 import JobsPage from './pages/JobsPage';
 
 
-const API_URL = 'http://localhost:5000/api';
-
+const API_URL =
+  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
 
 function Home() {
   const [jobs, setJobs] = useState([]);

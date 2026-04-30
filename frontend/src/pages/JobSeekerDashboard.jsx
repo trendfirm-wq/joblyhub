@@ -12,8 +12,8 @@ import {
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
-const API_URL = 'http://localhost:5000/api';
-
+const API_URL =
+  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
 export default function JobSeekerDashboard() {
   const user = JSON.parse(localStorage.getItem('joblyhubUser') || '{}');
   const token = localStorage.getItem('joblyhubToken');
