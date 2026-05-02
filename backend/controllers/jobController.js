@@ -1,4 +1,21 @@
 const Job = require('../models/Job');
+const cloudinary = require('../config/cloudinary');
+
+const uploadImageToCloudinary = async (file, folder) => {
+  const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+    'base64'
+  )}`;
+
+  const uploadResult = await cloudinary.uploader.upload(base64Image, {
+    folder,
+    resource_type: 'image',
+  });
+
+  return {
+    url: uploadResult.secure_url,
+    publicId: uploadResult.public_id,
+  };
+};
 
 // @desc    Employer creates a job
 // @route   POST /api/jobs
@@ -59,6 +76,19 @@ const createJob = async (req, res) => {
       });
     }
 
+    let companyLogo = req.user.companyLogo || '';
+    let companyLogoPublicId = req.user.companyLogoPublicId || '';
+
+    if (req.file) {
+      const uploadedLogo = await uploadImageToCloudinary(
+        req.file,
+        'joblyhub/job-company-logos'
+      );
+
+      companyLogo = uploadedLogo.url;
+      companyLogoPublicId = uploadedLogo.publicId;
+    }
+
     const job = await Job.create({
       employer: req.user._id,
 
@@ -67,12 +97,15 @@ const createJob = async (req, res) => {
       location,
       jobType,
       salary: salary || '',
-      deadline,
+      deadline: deadline || null,
 
       companyName,
       industry: industry || '',
       companyWebsite: companyWebsite || '',
       companyDescription: companyDescription || '',
+
+      companyLogo,
+      companyLogoPublicId,
 
       description,
       responsibilities: responsibilities || '',
@@ -229,6 +262,7 @@ const approveJob = async (req, res) => {
 
     job.status = 'approved';
     job.rejectionReason = '';
+    job.isActive = true;
 
     const updatedJob = await job.save();
 
@@ -297,38 +331,49 @@ const updateJob = async (req, res) => {
         message: 'You are not allowed to update this job',
       });
     }
-const fields = [
-  'title',
-  'category',
-  'location',
-  'jobType',
-  'salary',
-  'deadline',
 
-  'companyName',
-  'industry',
-  'companyWebsite',
-  'companyDescription',
+    const fields = [
+      'title',
+      'category',
+      'location',
+      'jobType',
+      'salary',
+      'deadline',
 
-  'description',
-  'responsibilities',
-  'requirements',
+      'companyName',
+      'industry',
+      'companyWebsite',
+      'companyDescription',
 
-  'applicationMethod',
-  'applicationEmail',
-  'applicationLink',
-  'applicationInstructions',
+      'description',
+      'responsibilities',
+      'requirements',
 
-  'contactName',
-  'contactEmail',
-  'contactPhone',
-];
+      'applicationMethod',
+      'applicationEmail',
+      'applicationLink',
+      'applicationInstructions',
+
+      'contactName',
+      'contactEmail',
+      'contactPhone',
+    ];
 
     fields.forEach((field) => {
       if (req.body[field] !== undefined) {
         job[field] = req.body[field];
       }
     });
+
+    if (req.file) {
+      const uploadedLogo = await uploadImageToCloudinary(
+        req.file,
+        'joblyhub/job-company-logos'
+      );
+
+      job.companyLogo = uploadedLogo.url;
+      job.companyLogoPublicId = uploadedLogo.publicId;
+    }
 
     // If employer edits an approved/rejected job, send it back for review.
     if (!isAdmin) {
@@ -384,6 +429,7 @@ const deleteJob = async (req, res) => {
     });
   }
 };
+
 // @desc    Employer/Admin views one job for editing
 // @route   GET /api/jobs/employer/:id
 // @access  Employer/Admin
@@ -414,6 +460,7 @@ const getEmployerJobById = async (req, res) => {
     });
   }
 };
+
 // @desc    Admin updates job status
 // @route   PATCH /api/jobs/admin/:id/status
 // @access  Admin
@@ -463,6 +510,7 @@ const updateJobStatus = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   createJob,
   getApprovedJobs,

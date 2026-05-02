@@ -46,11 +46,12 @@ const jobSchema = new mongoose.Schema(
       required: [true, 'Job type is required'],
     },
 
-    salary: {
-      type: String,
-      default: '',
-      trim: true,
-    },
+   salary: {
+  type: String,
+  default: '',
+  trim: true,
+},
+
 companyLogo: {
   type: String,
   default: '',
@@ -60,9 +61,10 @@ companyLogoPublicId: {
   type: String,
   default: '',
 },
-    deadline: {
-      type: Date,
-    },
+
+deadline: {
+  type: Date,
+},
 
     // 2. Company Information
     companyName: {
