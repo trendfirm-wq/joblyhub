@@ -45,10 +45,11 @@ import Commitment from './pages/Commitment';
 import Safety from './pages/Safety';
 import Contact from './pages/Contact';
 import JobsPage from './pages/JobsPage';
+import HowItWorks from "./pages/HowItWorks";
 
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
 
 function Home() {
   const [jobs, setJobs] = useState([]);
@@ -745,6 +746,7 @@ export default function App() {
 <Route path="/safety" element={<Safety />} />
 <Route path="/contact" element={<Contact />} />
 <Route path="/jobs" element={<JobsPage />} />
+<Route path="/how-it-works" element={<HowItWorks />} />
       </Routes>
     </BrowserRouter>
   );

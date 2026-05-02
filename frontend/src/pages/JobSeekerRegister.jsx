@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Eye, EyeOff, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+
 const categories = [
   'Technology & IT',
   'Business, Administration & Customer Service',
@@ -37,6 +39,9 @@ export default function JobSeekerRegister() {
     agreedToTerms: false,
   });
 
+  const [cvFile, setCvFile] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -47,6 +52,31 @@ export default function JobSeekerRegister() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const updateCv = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setMessage('Please upload a PDF, DOC, or DOCX file.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('CV must be less than 5MB.');
+      return;
+    }
+
+    setMessage('');
+    setCvFile(file);
   };
 
   const submitForm = async (e) => {
@@ -66,9 +96,22 @@ export default function JobSeekerRegister() {
     try {
       setLoading(true);
 
-      const res = await axios.post(`${API_URL}/auth/register`, {
-        ...form,
-        role: 'job_seeker',
+      const formData = new FormData();
+
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+
+      formData.append('role', 'job_seeker');
+
+      if (cvFile) {
+        formData.append('cvFile', cvFile);
+      }
+
+      const res = await axios.post(`${API_URL}/auth/register`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       localStorage.setItem('joblyhubToken', res.data.token);
@@ -87,6 +130,15 @@ export default function JobSeekerRegister() {
   return (
     <main className="auth-page">
       <div className="auth-card wide-card">
+        <button
+          type="button"
+          className="back-icon-only"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={22} />
+        </button>
+
         <div className="auth-heading">
           <span>Job seeker registration</span>
           <h1>Create job seeker account</h1>
@@ -200,10 +252,20 @@ export default function JobSeekerRegister() {
 
           <label>
             Upload CV / Resume
-            <input type="file" disabled />
-            <small className="field-note">
-              CV upload will be connected later.
-            </small>
+            <div className="logo-upload-box">
+              <input
+                type="file"
+                name="cvFile"
+                accept=".pdf,.doc,.docx"
+                onChange={updateCv}
+              />
+
+              <div>
+                <UploadCloud size={28} />
+                <span>{cvFile ? cvFile.name : 'Upload CV / Resume'}</span>
+                <small>Optional. PDF, DOC, or DOCX. Max size 5MB.</small>
+              </div>
+            </div>
           </label>
 
           <div className="form-section-title">Account Setup</div>
@@ -211,28 +273,58 @@ export default function JobSeekerRegister() {
           <div className="form-grid two">
             <label>
               Password
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={updateForm}
-                placeholder="Create password"
-                required
-                minLength="6"
-              />
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={updateForm}
+                  placeholder="Create password"
+                  required
+                  minLength="6"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </label>
 
             <label>
               Confirm Password
-              <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={updateForm}
-                placeholder="Confirm password"
-                required
-                minLength="6"
-              />
+              <div className="password-field">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={updateForm}
+                  placeholder="Confirm password"
+                  required
+                  minLength="6"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={
+                    showConfirmPassword
+                      ? 'Hide confirm password'
+                      : 'Show confirm password'
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
             </label>
           </div>
 

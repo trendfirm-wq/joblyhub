@@ -51,7 +51,15 @@ const jobSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+companyLogo: {
+  type: String,
+  default: '',
+},
 
+companyLogoPublicId: {
+  type: String,
+  default: '',
+},
     deadline: {
       type: Date,
     },

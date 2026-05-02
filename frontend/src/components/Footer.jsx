@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import logo from '../assets/Icon PNG background-01.png';
+import logo from '../assets/Icon PNG background-011.png';
 
 export default function Footer() {
   return (
@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="footer-brand">
           <Link to="/" className="footer-logo">
             <img src={logo} alt="JoblyHub Logo" />
-            <span>JoblyHub</span>
+            
           </Link>
 
           <p>
@@ -23,6 +23,7 @@ export default function Footer() {
           <Link to="/jobs">Jobs</Link>
           <Link to="/about">About JoblyHub</Link>
           <Link to="/contact">Contact</Link>
+
         </div>
 
         <div className="footer-col">
@@ -30,6 +31,7 @@ export default function Footer() {
           <Link to="/help">Help Center</Link>
           <Link to="/safety">Safety & Fraud Alert</Link>
           <Link to="/commitment">Our Commitment</Link>
+          <Link to="/how-it-works">How It Works</Link>
         </div>
 
         <div className="footer-col">

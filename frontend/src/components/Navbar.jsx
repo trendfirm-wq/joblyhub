@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import logo from "../assets/Icon PNG background-01.png";
 import "./Navbar.css";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("joblyhubUser") || "null");
+
+  const [shrunk, setShrunk] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dashboardPath =
     user?.role === "admin"
@@ -16,76 +20,105 @@ export default function Navbar() {
       ? "/job-seeker/dashboard"
       : "/login";
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 80) {
+        setShrunk(true);
+      } else {
+        setShrunk(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const closeMenu = () => setMenuOpen(false);
+
   const logout = () => {
     localStorage.removeItem("joblyhubToken");
     localStorage.removeItem("joblyhubUser");
+    setMenuOpen(false);
     navigate("/login", { replace: true });
   };
 
-  const navClass = ({ isActive }) => (isActive ? "nav-link active" : "nav-link");
+  const navClass = ({ isActive }) =>
+    isActive ? "nav-link active" : "nav-link";
 
   return (
-    <header className="navbar">
+    <header className={`navbar ${shrunk ? "navbar-shrunk" : ""}`}>
       <div className="container nav-inner">
-        <Link to="/" className="logo">
+        <Link to="/" className="logo" onClick={closeMenu}>
           <img src={logo} alt="JoblyHub Logo" className="logo-img" />
-          <span>JoblyHub</span>
         </Link>
 
-        <nav className="nav-links">
-          <NavLink to="/" end className={navClass}>
-            Home
-          </NavLink>
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Toggle navigation menu"
+          type="button"
+        >
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
 
-          <NavLink to="/jobs" className={navClass}>
-            Jobs
-          </NavLink>
+        <div className={`nav-menu ${menuOpen ? "open" : ""}`}>
+          <nav className="nav-links">
+            <NavLink to="/" end className={navClass} onClick={closeMenu}>
+              Home
+            </NavLink>
 
-          <NavLink to="/about" className={navClass}>
-            About
-          </NavLink>
+            <NavLink to="/jobs" className={navClass} onClick={closeMenu}>
+              Find Jobs
+            </NavLink>
 
-          <NavLink to="/help" className={navClass}>
-            Help Center
-          </NavLink>
+            <NavLink to="/help" className={navClass} onClick={closeMenu}>
+              Help Center
+            </NavLink>
+          </nav>
 
-          <NavLink to="/safety" className={navClass}>
-            Safety
-          </NavLink>
+          <div className="nav-actions">
+            {user ? (
+              <>
+                <NavLink
+                  to={dashboardPath}
+                  onClick={closeMenu}
+                  className={({ isActive }) =>
+                    isActive ? "dashboard-btn active-action" : "dashboard-btn"
+                  }
+                >
+                  Dashboard
+                </NavLink>
 
-          <NavLink to="/contact" className={navClass}>
-            Contact
-          </NavLink>
-        </nav>
+                <button onClick={logout} className="logout-btn" type="button">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink
+                  to="/login"
+                  onClick={closeMenu}
+                  className={({ isActive }) =>
+                    isActive ? "login-btn active-action" : "login-btn"
+                  }
+                >
+                  Login
+                </NavLink>
 
-        <div className="nav-actions">
-          {user ? (
-            <>
-              <NavLink to={dashboardPath} className={({ isActive }) =>
-                isActive ? "dashboard-btn active-action" : "dashboard-btn"
-              }>
-                Dashboard
-              </NavLink>
-
-              <button onClick={logout} className="logout-btn">
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <NavLink to="/login" className={({ isActive }) =>
-                isActive ? "login-btn active-action" : "login-btn"
-              }>
-                Login
-              </NavLink>
-
-              <NavLink to="/register" className={({ isActive }) =>
-                isActive ? "post-job-btn active-action" : "post-job-btn"
-              }>
-                Get Started
-              </NavLink>
-            </>
-          )}
+                <NavLink
+                  to="/register"
+                  onClick={closeMenu}
+                  className={({ isActive }) =>
+                    isActive ? "post-job-btn active-action" : "post-job-btn"
+                  }
+                >
+                  Get Started
+                </NavLink>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

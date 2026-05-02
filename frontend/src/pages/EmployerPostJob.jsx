@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { UploadCloud } from 'lucide-react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+
 const categories = [
   'Technology & IT',
   'Business, Administration & Customer Service',
@@ -56,6 +58,8 @@ export default function EmployerPostJob() {
     contactPhone: user.phone || '',
   });
 
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(user.companyLogo || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -66,6 +70,28 @@ export default function EmployerPostJob() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const updateLogo = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
+    if (!allowedTypes.includes(file.type)) {
+      setMessage('Please upload a JPG, PNG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage('Logo must be less than 2MB.');
+      return;
+    }
+
+    setMessage('');
+    setCompanyLogo(file);
+    setLogoPreview(URL.createObjectURL(file));
   };
 
   const submitJob = async (e) => {
@@ -80,11 +106,21 @@ export default function EmployerPostJob() {
     try {
       setLoading(true);
 
-      await axios.post(`${API_URL}/jobs`, form, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const formData = new FormData();
+
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
       });
+
+      if (companyLogo) {
+        formData.append('companyLogo', companyLogo);
+      }
+
+     await axios.post(`${API_URL}/jobs`, formData, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
       navigate('/employer/dashboard');
     } catch (error) {
@@ -103,7 +139,7 @@ export default function EmployerPostJob() {
 
       <main className="dashboard-page">
         <div className="container">
-          <div className="dashboard-top">
+          <div className="dashboard-top post-job-top">
             <div>
               <span>Employer</span>
               <h1>Post a new job</h1>
@@ -252,6 +288,36 @@ export default function EmployerPostJob() {
                   onChange={updateForm}
                   placeholder="Short company description"
                 />
+              </label>
+
+              <label>
+                Company Logo
+                <div className="logo-upload-box">
+                  <input
+                    type="file"
+                    name="companyLogo"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={updateLogo}
+                  />
+
+                  <div>
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Company logo preview" />
+                    ) : (
+                      <UploadCloud size={28} />
+                    )}
+
+                    <span>
+                      {companyLogo
+                        ? companyLogo.name
+                        : logoPreview
+                        ? 'Current company logo'
+                        : 'Upload company logo'}
+                    </span>
+
+                    <small>Optional. PNG, JPG, or WEBP. Max size 2MB.</small>
+                  </div>
+                </div>
               </label>
 
               <div className="form-section-title">3. Job Details</div>

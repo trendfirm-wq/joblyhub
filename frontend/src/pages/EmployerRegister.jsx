@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Eye, EyeOff, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+
 const categories = [
   'Technology & IT',
   'Business, Administration & Customer Service',
@@ -35,6 +37,10 @@ export default function EmployerRegister() {
     agreedToTerms: false,
   });
 
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -45,6 +51,28 @@ export default function EmployerRegister() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const updateLogo = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
+    if (!allowedTypes.includes(file.type)) {
+      setMessage('Please upload a JPG, PNG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage('Logo must be less than 2MB.');
+      return;
+    }
+
+    setMessage('');
+    setCompanyLogo(file);
+    setLogoPreview(URL.createObjectURL(file));
   };
 
   const submitForm = async (e) => {
@@ -64,9 +92,22 @@ export default function EmployerRegister() {
     try {
       setLoading(true);
 
-      const res = await axios.post(`${API_URL}/auth/register`, {
-        ...form,
-        role: 'employer',
+      const formData = new FormData();
+
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+
+      formData.append('role', 'employer');
+
+      if (companyLogo) {
+        formData.append('companyLogo', companyLogo);
+      }
+
+      const res = await axios.post(`${API_URL}/auth/register`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       localStorage.setItem('joblyhubToken', res.data.token);
@@ -85,6 +126,15 @@ export default function EmployerRegister() {
   return (
     <main className="auth-page">
       <div className="auth-card wide-card">
+        <button
+          type="button"
+          className="back-icon-only"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={22} />
+        </button>
+
         <div className="auth-heading">
           <span>Employer registration</span>
           <h1>Create employer account</h1>
@@ -185,10 +235,28 @@ export default function EmployerRegister() {
 
           <label>
             Company Logo
-            <input type="file" disabled />
-            <small className="field-note">
-              Logo upload will be connected later.
-            </small>
+            <div className="logo-upload-box">
+              <input
+                type="file"
+                name="companyLogo"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={updateLogo}
+              />
+
+              <div>
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Company logo preview" />
+                ) : (
+                  <UploadCloud size={28} />
+                )}
+
+                <span>
+                  {companyLogo ? companyLogo.name : 'Upload company logo'}
+                </span>
+
+                <small>Optional. PNG, JPG, or WEBP. Max size 2MB.</small>
+              </div>
+            </div>
           </label>
 
           <div className="form-section-title">Account Setup</div>
@@ -196,28 +264,58 @@ export default function EmployerRegister() {
           <div className="form-grid two">
             <label>
               Password
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={updateForm}
-                placeholder="Create password"
-                required
-                minLength="6"
-              />
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={updateForm}
+                  placeholder="Create password"
+                  required
+                  minLength="6"
+                />
+
+                <button
+                  type="button"
+                  className="password-eye-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </label>
 
             <label>
               Confirm Password
-              <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={updateForm}
-                placeholder="Confirm password"
-                required
-                minLength="6"
-              />
+              <div className="password-field">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={updateForm}
+                  placeholder="Confirm password"
+                  required
+                  minLength="6"
+                />
+
+                <button
+                  type="button"
+                  className="password-eye-btn"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={
+                    showConfirmPassword
+                      ? 'Hide confirm password'
+                      : 'Show confirm password'
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
             </label>
           </div>
 

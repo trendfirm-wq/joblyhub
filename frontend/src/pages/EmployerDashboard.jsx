@@ -12,7 +12,7 @@ import {
 import Navbar from '../components/Navbar';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-8qgg.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
 export default function EmployerDashboard() {
   const user = JSON.parse(localStorage.getItem('joblyhubUser') || '{}');
   const token = localStorage.getItem('joblyhubToken');
