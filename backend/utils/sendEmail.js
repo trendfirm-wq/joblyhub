@@ -5,6 +5,8 @@ const createTransporter = () => {
     throw new Error('Email settings are missing in environment variables');
   }
 
+  console.log('Creating Gmail transporter for:', process.env.EMAIL_USER);
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -15,6 +17,8 @@ const createTransporter = () => {
 };
 
 const sendEmail = async ({ to, subject, html }) => {
+  console.log('SEND EMAIL STARTED:', { to, subject });
+
   const transporter = createTransporter();
 
   const info = await transporter.sendMail({
@@ -24,7 +28,7 @@ const sendEmail = async ({ to, subject, html }) => {
     html,
   });
 
-  console.log('Admin alert email sent:', info.messageId);
+  console.log('ADMIN ALERT EMAIL SENT:', info.messageId);
 };
 
 module.exports = sendEmail;

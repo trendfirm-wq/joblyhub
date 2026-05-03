@@ -1,12 +1,16 @@
 const sendEmail = require('./sendEmail');
 
 const sendAdminJobAlert = async (job) => {
+  console.log('ADMIN ALERT FUNCTION STARTED');
+
   const adminEmail = process.env.ADMIN_ALERT_EMAIL;
 
   if (!adminEmail) {
     console.log('ADMIN_ALERT_EMAIL not set. Skipping admin job alert.');
     return;
   }
+
+  console.log('Sending admin alert to:', adminEmail);
 
   const jobTitle = job.title || 'New job';
   const companyName = job.companyName || 'Unknown employer';
@@ -16,7 +20,7 @@ const sendAdminJobAlert = async (job) => {
 
   const adminDashboardUrl =
     process.env.ADMIN_DASHBOARD_URL ||
-    'https://joblyhub.com/admin/dashboard';
+    'https://joblyhub-1.onrender.com/admin/dashboard';
 
   await sendEmail({
     to: adminEmail,
@@ -50,6 +54,8 @@ const sendAdminJobAlert = async (job) => {
       </div>
     `,
   });
+
+  console.log('ADMIN ALERT FUNCTION FINISHED');
 };
 
 module.exports = sendAdminJobAlert;
