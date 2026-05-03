@@ -106,13 +106,11 @@ deadline: {
       default: '',
     },
 
-    // 4. How to Apply
-    applicationMethod: {
-      type: String,
-      enum: ['email', 'link', 'platform'],
-      required: true,
-    },
-
+   applicationMethod: {
+  type: String,
+  enum: ['email', 'website', 'joblyhub'],
+  required: true,
+},
     applicationEmail: {
       type: String,
       default: '',
