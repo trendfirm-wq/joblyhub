@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
 const createTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -12,11 +13,17 @@ const createTransporter = () => {
     port: 587,
     secure: false,
     requireTLS: true,
-    family: 4,
+
+    // Force IPv4 lookup. This fixes Render IPv6 ENETUNREACH issues.
+    lookup: (hostname, options, callback) => {
+      return dns.lookup(hostname, { family: 4 }, callback);
+    },
+
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+
     connectionTimeout: 15000,
     greetingTimeout: 15000,
     socketTimeout: 15000,
