@@ -71,12 +71,11 @@ const createJob = async (req, res) => {
       });
     }
 
-    if (applicationMethod === 'link' && !applicationLink) {
-      return res.status(400).json({
-        message: 'Application link is required',
-      });
-    }
-
+    if (applicationMethod === 'website' && !applicationLink) {
+  return res.status(400).json({
+    message: 'Application website link is required',
+  });
+}
     let companyLogo = req.user.companyLogo || '';
     let companyLogoPublicId = req.user.companyLogoPublicId || '';
 
