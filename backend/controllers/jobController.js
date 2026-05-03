@@ -1,5 +1,6 @@
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
+const sendAdminJobAlert = require('../utils/sendAdminJobAlert');
 
 const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
@@ -122,7 +123,11 @@ const createJob = async (req, res) => {
 
       status: 'pending',
     });
-
+try {
+  await sendAdminJobAlert(job);
+} catch (emailError) {
+  console.log('Admin job alert email failed:', emailError.message);
+}
     res.status(201).json({
       message: 'Job submitted successfully and is pending admin review',
       job,
