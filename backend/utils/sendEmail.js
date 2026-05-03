@@ -1,41 +1,24 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
+const { Resend } = require('resend');
 
 const sendEmail = async ({ to, subject, html }) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error('Email settings are missing in environment variables');
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is missing in environment variables');
   }
 
-  console.log('SEND EMAIL STARTED:', { to, subject });
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
-
-    lookup: (hostname, options, callback) => {
-      return dns.lookup(hostname, { family: 4 }, callback);
-    },
-
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
-  });
-
-  const info = await transporter.sendMail({
-    from: `"JoblyHub Alerts" <${process.env.EMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: 'JoblyHub Alerts <onboarding@resend.dev>',
     to,
     subject,
     html,
   });
 
-  console.log('ADMIN ALERT EMAIL SENT:', info.messageId);
+  if (error) {
+    throw new Error(error.message || 'Failed to send email with Resend');
+  }
+
+  console.log('Admin alert email sent with Resend:', data?.id);
 };
 
 module.exports = sendEmail;
