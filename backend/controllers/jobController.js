@@ -123,11 +123,9 @@ const createJob = async (req, res) => {
 
       status: 'pending',
     });
-try {
-  await sendAdminJobAlert(job);
-} catch (emailError) {
+sendAdminJobAlert(job).catch((emailError) => {
   console.log('Admin job alert email failed:', emailError.message);
-}
+});
     res.status(201).json({
       message: 'Job submitted successfully and is pending admin review',
       job,
