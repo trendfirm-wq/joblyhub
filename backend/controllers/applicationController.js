@@ -2,7 +2,8 @@ const Application = require('../models/Application');
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
 
-const APPLICANT_PUBLIC_FIELDS = 'name email phone emailVerified phoneVerified';
+const APPLICANT_PUBLIC_FIELDS =
+  'name email phone location preferredJobCategory highestQualification experienceLevel emailVerified phoneVerified';
 
 const JOB_PUBLIC_FIELDS =
   'title companyName location jobType category salary status applicationMethod applicationEmail applicationLink';
