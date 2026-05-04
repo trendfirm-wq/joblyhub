@@ -22,6 +22,9 @@ const formatUserResponse = (user) => {
     resumeUrl: user.resumeUrl,
 
     agreedToTerms: user.agreedToTerms,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+
     token: generateToken(user._id),
   };
 };
@@ -185,11 +188,76 @@ const loginUser = async (req, res) => {
 };
 
 const getMe = async (req, res) => {
-  res.json(req.user);
+  res.json(formatUserResponse(req.user));
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    const {
+      name,
+      phone,
+
+      companyName,
+      companyIndustry,
+      companyWebsite,
+      companyDescription,
+
+      location,
+      preferredJobCategory,
+      highestQualification,
+      experienceLevel,
+      resumeUrl,
+    } = req.body;
+
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+
+    if (user.role === 'employer' || user.role === 'admin') {
+      if (companyName !== undefined) user.companyName = companyName;
+      if (companyIndustry !== undefined) user.companyIndustry = companyIndustry;
+      if (companyWebsite !== undefined) user.companyWebsite = companyWebsite;
+      if (companyDescription !== undefined) {
+        user.companyDescription = companyDescription;
+      }
+    }
+
+    if (user.role === 'job_seeker' || user.role === 'admin') {
+      if (location !== undefined) user.location = location;
+      if (preferredJobCategory !== undefined) {
+        user.preferredJobCategory = preferredJobCategory;
+      }
+      if (highestQualification !== undefined) {
+        user.highestQualification = highestQualification;
+      }
+      if (experienceLevel !== undefined) user.experienceLevel = experienceLevel;
+      if (resumeUrl !== undefined) user.resumeUrl = resumeUrl;
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: formatUserResponse(updatedUser),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to update profile',
+      error: error.message,
+    });
+  }
 };
 
 module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateProfile,
 };
