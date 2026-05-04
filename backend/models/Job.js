@@ -102,11 +102,16 @@ deadline: {
     },
 
     requirements: {
-      type: String,
-      default: '',
-    },
+  type: String,
+  default: '',
+},
 
-   applicationMethod: {
+additionalInformation: {
+  type: String,
+  default: '',
+},
+
+applicationMethod: {
   type: String,
   enum: ['email', 'website', 'joblyhub'],
   required: true,

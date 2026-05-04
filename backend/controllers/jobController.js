@@ -37,10 +37,11 @@ const createJob = async (req, res) => {
       companyDescription,
 
       description,
-      responsibilities,
-      requirements,
+responsibilities,
+requirements,
+additionalInformation,
 
-      applicationMethod,
+applicationMethod,
       applicationEmail,
       applicationLink,
       applicationInstructions,
@@ -108,10 +109,11 @@ const createJob = async (req, res) => {
       companyLogoPublicId,
 
       description,
-      responsibilities: responsibilities || '',
-      requirements: requirements || '',
+responsibilities: responsibilities || '',
+requirements: requirements || '',
+additionalInformation: additionalInformation || '',
 
-      applicationMethod,
+applicationMethod,
       applicationEmail: applicationEmail || '',
       applicationLink: applicationLink || '',
       applicationInstructions: applicationInstructions || '',
@@ -348,10 +350,11 @@ const updateJob = async (req, res) => {
       'companyDescription',
 
       'description',
-      'responsibilities',
-      'requirements',
+'responsibilities',
+'requirements',
+'additionalInformation',
 
-      'applicationMethod',
+'applicationMethod',
       'applicationEmail',
       'applicationLink',
       'applicationInstructions',
