@@ -44,10 +44,53 @@ const applicationSchema = new mongoose.Schema(
       trim: true,
     },
 
+    applicationPdfUrl: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
+    applicationPdfPublicId: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
     status: {
       type: String,
-      enum: ['submitted', 'reviewed', 'shortlisted', 'rejected'],
+      enum: [
+        'submitted',
+        'reviewed',
+        'shortlisted',
+        'contacted',
+        'interviewing',
+        'hired',
+        'not_selected',
+        'rejected',
+      ],
       default: 'submitted',
+    },
+
+    employerNote: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
+    interviewDate: {
+      type: Date,
+    },
+
+    interviewMethod: {
+      type: String,
+      enum: ['', 'phone', 'whatsapp', 'in_person', 'online'],
+      default: '',
+    },
+
+    interviewLocation: {
+      type: String,
+      default: '',
+      trim: true,
     },
   },
   {
