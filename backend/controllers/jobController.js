@@ -206,6 +206,9 @@ const getJobById = async (req, res) => {
       });
     }
 
+    job.views = (job.views || 0) + 1;
+    await job.save();
+
     res.json(job);
   } catch (error) {
     res.status(500).json({

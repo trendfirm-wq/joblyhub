@@ -202,7 +202,10 @@ const jobSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
-
+views: {
+  type: Number,
+  default: 0,
+},
     rejectionReason: {
       type: String,
       default: '',

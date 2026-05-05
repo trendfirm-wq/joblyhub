@@ -45,7 +45,7 @@ export default function AdminDashboard() {
 
   const fetchUserStats = async () => {
     try {
-      const res = await axios.get(`${API_URL}/auth/admin/user-stats`, {
+     const res = await axios.get(`${API_URL}/users/admin/stats`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -295,14 +295,15 @@ export default function AdminDashboard() {
                 <table className="dashboard-table">
                   <thead>
                     <tr>
-                      <th>Job</th>
-                      <th>Employer</th>
-                      <th>Category</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Actions</th>
-                    </tr>
+  <th>Job</th>
+  <th>Employer</th>
+  <th>Category</th>
+  <th>Type</th>
+  <th>Views</th>
+  <th>Status</th>
+  <th>Date</th>
+  <th>Actions</th>
+</tr>
                   </thead>
 
                   <tbody>
@@ -320,7 +321,7 @@ export default function AdminDashboard() {
 
                         <td>{job.category}</td>
                         <td>{job.jobType}</td>
-
+                          <td>{job.views || 0}</td>
                         <td>
                           <span className={`status-badge ${job.status}`}>
                             {job.status}
