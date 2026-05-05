@@ -8,12 +8,13 @@ import {
   SlidersHorizontal,
   XCircle,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
+
 const categories = [
   'Technology & IT',
   'Business, Administration & Customer Service',
@@ -32,6 +33,8 @@ const categories = [
 const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote'];
 
 export default function JobsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [error, setError] = useState('');
@@ -43,24 +46,64 @@ export default function JobsPage() {
     jobType: '',
   });
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const cleanText = (value = '') => {
+    if (!value) return '';
+
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = String(value);
+    const decodedText = textarea.value;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = decodedText;
+
+    return (temp.textContent || temp.innerText || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const shortenText = (value = '', max = 150) => {
+    const text = cleanText(value);
+
+    if (!text) return 'No description provided.';
+
+    if (text.length > max) {
+      return `${text.slice(0, max).trim()}...`;
+    }
+
+    return text;
+  };
+
+  const buildCleanParams = (customFilters) => {
+    const params = {};
+
+    if (customFilters.search?.trim()) {
+      params.search = customFilters.search.trim();
+    }
+
+    if (customFilters.category) {
+      params.category = customFilters.category;
+    }
+
+    if (customFilters.location?.trim()) {
+      params.location = customFilters.location.trim();
+    }
+
+    if (customFilters.jobType) {
+      params.jobType = customFilters.jobType;
+    }
+
+    return params;
+  };
 
   const fetchJobs = async (customFilters = filters) => {
     try {
       setLoadingJobs(true);
 
-      const params = {};
-
-      if (customFilters.search) params.search = customFilters.search;
-      if (customFilters.category) params.category = customFilters.category;
-      if (customFilters.location) params.location = customFilters.location;
-      if (customFilters.jobType) params.jobType = customFilters.jobType;
+      const params = buildCleanParams(customFilters);
 
       const res = await axios.get(`${API_URL}/jobs`, { params });
 
-      setJobs(res.data);
+      setJobs(res.data || []);
       setError('');
     } catch (err) {
       setError('Unable to load jobs. Please make sure the backend is running.');
@@ -68,6 +111,19 @@ export default function JobsPage() {
       setLoadingJobs(false);
     }
   };
+
+  useEffect(() => {
+    const urlFilters = {
+      search: searchParams.get('search') || '',
+      category: searchParams.get('category') || '',
+      location: searchParams.get('location') || '',
+      jobType: searchParams.get('jobType') || '',
+    };
+
+    setFilters(urlFilters);
+    fetchJobs(urlFilters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const updateFilter = (e) => {
     const { name, value } = e.target;
@@ -80,6 +136,9 @@ export default function JobsPage() {
 
   const submitFilters = (e) => {
     e.preventDefault();
+
+    const cleanParams = buildCleanParams(filters);
+    setSearchParams(cleanParams);
     fetchJobs(filters);
   };
 
@@ -92,8 +151,12 @@ export default function JobsPage() {
     };
 
     setFilters(emptyFilters);
+    setSearchParams({});
     fetchJobs(emptyFilters);
   };
+
+  const hasActiveFilters =
+    filters.search || filters.category || filters.location || filters.jobType;
 
   return (
     <div className="site">
@@ -199,15 +262,35 @@ export default function JobsPage() {
               </div>
             </form>
 
+            {hasActiveFilters && (
+              <div className="active-filter-note">
+                <Search size={16} />
+                <p>
+                  Showing jobs matching your selected filters. You can adjust
+                  the filters above or reset them to view all approved jobs.
+                </p>
+              </div>
+            )}
+
             <div className="jobs-results-top">
               <div>
                 <span>Job Results</span>
                 <h2>
                   {loadingJobs
                     ? 'Loading jobs...'
-                    : `${jobs.length} approved job${jobs.length === 1 ? '' : 's'} found`}
+                    : `${jobs.length} approved job${
+                        jobs.length === 1 ? '' : 's'
+                      } found`}
                 </h2>
               </div>
+            </div>
+
+            <div className="jobs-update-note">
+              <Briefcase size={18} />
+              <p>
+                We are actively adding new job opportunities. Check back
+                regularly for updates.
+              </p>
             </div>
 
             {loadingJobs && <p className="state-text">Loading jobs...</p>}
@@ -227,46 +310,66 @@ export default function JobsPage() {
 
             {!loadingJobs && !error && jobs.length > 0 && (
               <div className="jobs-list-grid">
-                {jobs.map((job) => (
-                  <article className="job-card premium-job-card" key={job._id}>
-                    <div className="job-card-top">
-                      <div className="job-logo">
-                        {job.companyName?.charAt(0) || 'J'}
+                {jobs.map((job) => {
+                  const title = cleanText(job.title) || 'Untitled Job';
+                  const companyName = cleanText(job.companyName) || 'Company';
+                  const location = cleanText(job.location) || 'Not provided';
+                  const jobType = cleanText(job.jobType) || 'Not provided';
+                  const category = cleanText(job.category) || 'Uncategorized';
+
+                  return (
+                    <article
+                      className="job-card premium-job-card"
+                      key={job._id}
+                    >
+                      <div className="job-card-top">
+                        <div className="job-logo">
+                          {job.companyLogo ? (
+                            <img
+                              src={job.companyLogo}
+                              alt={`${companyName} logo`}
+                              className="job-card-company-logo"
+                            />
+                          ) : (
+                            companyName.charAt(0)
+                          )}
+                        </div>
+
+                        <div>
+                          <h3>{title}</h3>
+                          <p>{companyName}</p>
+                        </div>
                       </div>
 
-                      <div>
-                        <h3>{job.title}</h3>
-                        <p>{job.companyName}</p>
+                      <div className="job-meta">
+                        <span>
+                          <MapPin size={15} />
+                          {location}
+                        </span>
+
+                        <span>
+                          <Clock size={15} />
+                          {jobType}
+                        </span>
                       </div>
-                    </div>
 
-                    <div className="job-meta">
-                      <span>
-                        <MapPin size={15} />
-                        {job.location}
-                      </span>
+                      <p className="job-desc">
+                        {shortenText(job.description, 150)}
+                      </p>
 
-                      <span>
-                        <Clock size={15} />
-                        {job.jobType}
-                      </span>
-                    </div>
+                      <div className="job-card-bottom">
+                        <span className="job-pill">{category}</span>
 
-                    <p className="job-desc">
-                      {job.description?.length > 150
-                        ? `${job.description.slice(0, 150)}...`
-                        : job.description}
-                    </p>
-
-                    <div className="job-card-bottom">
-                      <span className="job-pill">{job.category}</span>
-
-                      <Link to={`/jobs/${job._id}`} className="btn btn-small">
-                        View Details
-                      </Link>
-                    </div>
-                  </article>
-                ))}
+                        <Link
+                          to={`/jobs/${job._id}`}
+                          className="btn btn-small"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>

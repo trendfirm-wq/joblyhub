@@ -4,7 +4,7 @@ import { ArrowLeft, Eye, EyeOff, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 
 const categories = [
   'Technology & IT',
@@ -80,52 +80,63 @@ export default function JobSeekerRegister() {
   };
 
   const submitForm = async (e) => {
-    e.preventDefault();
-    setMessage('');
+  e.preventDefault();
+  setMessage('');
 
-    if (form.password !== form.confirmPassword) {
-      setMessage('Passwords do not match.');
-      return;
-    }
+  if (form.password !== form.confirmPassword) {
+    setMessage('Passwords do not match.');
+    return;
+  }
 
-    if (!form.agreedToTerms) {
-      setMessage('Please agree to the Terms of Use and Privacy Policy.');
-      return;
-    }
+  if (!form.agreedToTerms) {
+    setMessage('Please agree to the Terms of Use and Privacy Policy.');
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const formData = new FormData();
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      location: form.location.trim(),
+      preferredJobCategory: form.preferredJobCategory,
+      highestQualification: form.highestQualification.trim(),
+      experienceLevel: form.experienceLevel,
+      password: form.password,
+      confirmPassword: form.confirmPassword,
+      agreedToTerms: form.agreedToTerms,
+      role: 'job_seeker',
+    };
 
-      Object.entries(form).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
+    const res = await axios.post(`${API_URL}/auth/register`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-      formData.append('role', 'job_seeker');
+    localStorage.setItem('joblyhubToken', res.data.token);
+    localStorage.setItem('joblyhubUser', JSON.stringify(res.data));
 
-      if (cvFile) {
-        formData.append('cvFile', cvFile);
-      }
+    navigate('/job-seeker/dashboard');
+  } catch (error) {
+    console.log('REGISTRATION ERROR:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
 
-      const res = await axios.post(`${API_URL}/auth/register`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      localStorage.setItem('joblyhubToken', res.data.token);
-      localStorage.setItem('joblyhubUser', JSON.stringify(res.data));
-
-      navigate('/job-seeker/dashboard');
-    } catch (error) {
-      setMessage(
-        error.response?.data?.message || 'Registration failed. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setMessage(
+      error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        'Registration failed. Please try again.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="auth-page">

@@ -4,7 +4,7 @@ import { ArrowLeft, Eye, EyeOff, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 
 const categories = [
   'Technology & IT',

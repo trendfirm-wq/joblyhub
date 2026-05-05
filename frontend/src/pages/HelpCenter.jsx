@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import InfoPage from "./InfoPage";
 import { Link } from "react-router-dom";
+import PageTitle from '../components/PageTitle';
 
 export default function HelpCenter() {
   return (
@@ -288,7 +289,7 @@ export default function HelpCenter() {
         </div>
 
         <Link to="/contact" className="btn btn-primary">
-          <Mail size={18} />
+          <Mail size={17} />
           Contact Support
         </Link>
       </section>

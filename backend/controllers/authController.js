@@ -260,5 +260,4 @@ module.exports = {
   loginUser,
   getMe,
   updateProfile,
-  getUserStats,
 };

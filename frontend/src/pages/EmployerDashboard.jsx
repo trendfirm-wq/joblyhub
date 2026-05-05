@@ -7,12 +7,13 @@ import {
   Clock3,
   PlusCircle,
   RefreshCcw,
+  Users,
   XCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 export default function EmployerDashboard() {
   const user = JSON.parse(localStorage.getItem('joblyhubUser') || '{}');
   const token = localStorage.getItem('joblyhubToken');
@@ -97,7 +98,13 @@ export default function EmployerDashboard() {
                 <RefreshCcw size={18} />
                 Refresh
               </button>
-
+<Link
+  to="/employer/applications"
+  className="btn btn-ghost dash-action"
+>
+  <Users size={18} />
+  Submissions
+</Link>
               <Link to="/employer/post-job" className="btn btn-primary dash-action">
                 <PlusCircle size={18} />
                 Post Job

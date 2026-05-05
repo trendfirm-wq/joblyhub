@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'https://joblyhub-1.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Login() {
     password: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -88,14 +90,25 @@ export default function Login() {
 
             <label>
               Password
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={updateForm}
-                placeholder="Enter your password"
-                required
-              />
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={updateForm}
+                  placeholder="Enter your password"
+                  required
+                />
+
+                <button
+                  type="button"
+                  className="password-eye-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </label>
 
             <button className="btn btn-primary auth-btn" disabled={loading}>

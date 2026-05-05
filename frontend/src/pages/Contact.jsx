@@ -1,4 +1,16 @@
-import { Mail, MapPin, Phone, Send, Globe2 } from 'lucide-react';
+import {
+  Mail,
+  MapPin,
+  Phone,
+  Send,
+  MessageCircle,
+  Clock,
+  CheckCircle2,
+  HelpCircle,
+  ShieldAlert,
+  Briefcase,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import InfoPage from './InfoPage';
 
 export default function Contact() {
@@ -6,45 +18,54 @@ export default function Contact() {
     <InfoPage
       eyebrow="Contact JoblyHub"
       title="Talk to us about support, jobs, partnerships, or enquiries."
-      subtitle="Reach the JoblyHub team for help with employer accounts, job listings, applications, or platform questions."
+      subtitle="Reach the JoblyHub team for help with employer accounts, job listings, applications, suspicious jobs, or platform questions."
       badge="We are here to help"
     >
       <section className="contact-layout">
+        {/* LEFT SIDE */}
         <div className="contact-main">
           <div className="section-heading left">
-            <span>Get in touch</span>
-            <h2>Contact details</h2>
+            <span>Contact Us</span>
+            <h2>Contact Details</h2>
             <p>
-              Use the details below to reach JoblyHub. For suspicious job
-              listings, include the job title and company name when contacting
-              support.
+              Use the options below to reach JoblyHub support. For faster
+              assistance, include relevant details like job title, company name,
+              or issue description.
             </p>
           </div>
 
           <div className="contact-cards">
-            <div className="contact-card">
+            <a
+              href="mailto:info@joblyhub.com?subject=JoblyHub%20Support%20Enquiry"
+              className="contact-card"
+            >
               <Mail />
               <div>
                 <span>Email</span>
-                <strong>support@joblyhub.com</strong>
+                <strong>info@joblyhub.com</strong>
               </div>
-            </div>
+            </a>
 
-            <div className="contact-card">
+            <a href="tel:+233204116245" className="contact-card">
               <Phone />
               <div>
                 <span>Phone</span>
-                <strong>0553934068</strong>
+                <strong>0204 116 245</strong>
               </div>
-            </div>
+            </a>
 
-            <div className="contact-card">
-              <Globe2 />
+            <a
+              href="https://wa.me/233204116245?text=Hello%20JoblyHub%2C%20I%20need%20assistance."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="contact-card"
+            >
+              <MessageCircle />
               <div>
-                <span>Website</span>
-                <strong>trendspaceventures.netlify.app</strong>
+                <span>WhatsApp</span>
+                <strong>0204 116 245</strong>
               </div>
-            </div>
+            </a>
 
             <div className="contact-card">
               <MapPin />
@@ -54,26 +75,115 @@ export default function Contact() {
               </div>
             </div>
           </div>
+
+          <div className="contact-info-box">
+            <div className="contact-info-title">
+              <Clock size={20} />
+              <h3>Support Hours</h3>
+            </div>
+
+            <ul className="contact-info-list">
+              <li>
+                <span>Monday – Friday</span>
+                <strong>8:00 AM – 6:00 PM</strong>
+              </li>
+              <li>
+                <span>Saturday</span>
+                <strong>9:00 AM – 2:00 PM</strong>
+              </li>
+              <li>
+                <span>Sunday & Public Holidays</span>
+                <strong>Closed</strong>
+              </li>
+            </ul>
+          </div>
+
+          <div className="contact-info-box">
+            <div className="contact-info-title">
+              <CheckCircle2 size={20} />
+              <h3>What We Can Help With</h3>
+            </div>
+
+            <ul className="contact-help-list">
+              <li>Job application issues</li>
+              <li>Employer account setup</li>
+              <li>Job listing approvals</li>
+              <li>Suspicious or fake job reports</li>
+              <li>General platform support</li>
+            </ul>
+          </div>
         </div>
 
+        {/* RIGHT SIDE */}
         <div className="contact-form-card">
           <div className="form-card-icon">
             <Send />
           </div>
 
-          <h3>Message preview</h3>
+          <h3>How would you like to reach us?</h3>
+
           <p>
-            A real contact form can be connected later. For now, users can reach
-            JoblyHub through email or phone.
+            Choose the option that works best for you. We typically respond
+            within 24 hours.
           </p>
 
-          <div className="fake-form">
-            <input placeholder="Your name" disabled />
-            <input placeholder="Your email" disabled />
-            <textarea placeholder="Your message" disabled></textarea>
-            <button className="btn btn-primary" disabled>
-              Send Message
-            </button>
+          <div className="contact-direct-actions">
+            <a
+              href="mailto:info@joblyhub.com?subject=JoblyHub%20Support%20Enquiry"
+              className="btn btn-primary"
+            >
+              <Mail size={18} />
+              Send Email
+            </a>
+
+            <a href="tel:+233204116245" className="btn btn-ghost">
+              <Phone size={18} />
+              Call Now
+            </a>
+
+            <a
+              href="https://wa.me/233204116245?text=Hello%20JoblyHub%2C%20I%20need%20assistance."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost"
+            >
+              <MessageCircle size={18} />
+              Chat on WhatsApp
+            </a>
+          </div>
+
+          <div className="contact-note">
+            <strong>Before You Contact Us</strong>
+            <p>To help us resolve your issue faster, please include:</p>
+
+            <ul>
+              <li>Your full name</li>
+              <li>Job title, if applicable</li>
+              <li>Company name, if applicable</li>
+              <li>A short description of your issue</li>
+            </ul>
+          </div>
+
+          <div className="quick-help-box">
+            <h4>Quick Help</h4>
+            <p>Before reaching out, you might find answers here:</p>
+
+            <div className="quick-help-links">
+              <Link to="/help-center">
+                <HelpCircle size={17} />
+                Help Center
+              </Link>
+
+              <Link to="/safety">
+                <ShieldAlert size={17} />
+                Safety & Fraud Alerts
+              </Link>
+
+              <Link to="/how-it-works">
+                <Briefcase size={17} />
+                How JoblyHub Works
+              </Link>
+            </div>
           </div>
         </div>
       </section>

@@ -15,6 +15,9 @@ import {
 import InfoPage from "./InfoPage";
 import { Link } from "react-router-dom";
 
+import PageTitle from '../components/PageTitle';
+
+
 export default function About() {
   return (
     <InfoPage
