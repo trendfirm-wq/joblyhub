@@ -1,5 +1,61 @@
 const mongoose = require('mongoose');
 
+const JOB_CATEGORIES = [
+  'Technology & IT',
+  'Business & Administration',
+  'Sales & Marketing',
+  'Engineering & Technical',
+  'Healthcare & Medical',
+  'Education & Training',
+  'Customer Service & Support',
+  'Transport & Logistics',
+  'Skilled Trades & Artisans',
+  'Hospitality & Tourism',
+  'Finance & Accounting',
+  'Human Resources & Recruitment',
+  'Legal & Compliance',
+  'Creative & Design',
+  'Media & Communications',
+  'Security Services',
+  'Agriculture & Farming',
+  'Construction & Real Estate',
+  'Project Management',
+  'General & Other Jobs',
+];
+
+const INDUSTRIES = [
+  'Technology & Software',
+  'Telecommunications',
+  'Banking & Financial Services',
+  'Insurance',
+  'Accounting & Audit',
+  'Manufacturing & Production',
+  'Construction & Infrastructure',
+  'Real Estate & Property',
+  'Retail & E-commerce',
+  'Wholesale & Distribution',
+  'Transportation & Logistics',
+  'Energy & Utilities (Oil, Gas, Power)',
+  'Mining & Natural Resources',
+  'Agriculture & Agribusiness',
+  'Healthcare & Pharmaceuticals',
+  'Education & Training',
+  'Hospitality & Tourism',
+  'Media & Entertainment',
+  'Marketing & Advertising',
+  'Consulting & Professional Services',
+  'Legal Services',
+  'Government & Public Sector',
+  'NGO & Non-Profit',
+  'Security Services',
+  'Automotive Industry',
+  'Environmental & Waste Management',
+  'Import & Export / Trading',
+  'Human Resources Services',
+  'Research & Development',
+  'Other Industries',
+];
+
 const jobSchema = new mongoose.Schema(
   {
     employer: {
@@ -17,20 +73,7 @@ const jobSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: [
-        'Technology & IT',
-        'Business, Administration & Customer Service',
-        'Sales & Marketing',
-        'Finance & Accounting',
-        'Engineering & Technical',
-        'Healthcare & Medical',
-        'Education & Training',
-        'Transport & Logistics',
-        'Skilled Trades',
-        'Hospitality, Travel & Services',
-        'Creative & Design',
-        'NGO & Development',
-      ],
+      enum: JOB_CATEGORIES,
       required: [true, 'Category is required'],
     },
 
@@ -46,25 +89,25 @@ const jobSchema = new mongoose.Schema(
       required: [true, 'Job type is required'],
     },
 
-   salary: {
-  type: String,
-  default: '',
-  trim: true,
-},
+    salary: {
+      type: String,
+      default: '',
+      trim: true,
+    },
 
-companyLogo: {
-  type: String,
-  default: '',
-},
+    companyLogo: {
+      type: String,
+      default: '',
+    },
 
-companyLogoPublicId: {
-  type: String,
-  default: '',
-},
+    companyLogoPublicId: {
+      type: String,
+      default: '',
+    },
 
-deadline: {
-  type: Date,
-},
+    deadline: {
+      type: Date,
+    },
 
     // 2. Company Information
     companyName: {
@@ -75,6 +118,7 @@ deadline: {
 
     industry: {
       type: String,
+      enum: ['', ...INDUSTRIES],
       default: '',
       trim: true,
     },
@@ -102,20 +146,21 @@ deadline: {
     },
 
     requirements: {
-  type: String,
-  default: '',
-},
+      type: String,
+      default: '',
+    },
 
-additionalInformation: {
-  type: String,
-  default: '',
-},
+    additionalInformation: {
+      type: String,
+      default: '',
+    },
 
-applicationMethod: {
-  type: String,
-  enum: ['email', 'website', 'joblyhub'],
-  required: true,
-},
+    applicationMethod: {
+      type: String,
+      enum: ['email', 'website', 'joblyhub'],
+      required: true,
+    },
+
     applicationEmail: {
       type: String,
       default: '',
