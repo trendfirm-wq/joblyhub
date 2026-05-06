@@ -24,6 +24,7 @@ app.use('/api/resumes', require('./routes/resumeRoutes'));
 app.use('/api/job-alerts', require('./routes/jobAlertRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/polls', require('./routes/pollRoutes'));
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
