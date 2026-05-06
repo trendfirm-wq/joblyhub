@@ -5,11 +5,11 @@ const {
   voteHomeJobStatusPoll,
 } = require('../controllers/pollController');
 
-const { protect } = require('../middleware/authMiddleware');
+const { protectOptional } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/home-job-status', protect, getHomeJobStatusPoll);
-router.post('/home-job-status/vote', protect, voteHomeJobStatusPoll);
+router.get('/home-job-status', protectOptional, getHomeJobStatusPoll);
+router.post('/home-job-status/vote', protectOptional, voteHomeJobStatusPoll);
 
 module.exports = router;

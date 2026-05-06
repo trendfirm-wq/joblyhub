@@ -9,20 +9,25 @@ const pollOptions = [
   'Just browsing',
 ];
 
+const buildResults = (votes) => {
+  const results = pollOptions.reduce((acc, option) => {
+    acc[option] = 0;
+    return acc;
+  }, {});
+
+  votes.forEach((vote) => {
+    if (results[vote.option] !== undefined) {
+      results[vote.option] += 1;
+    }
+  });
+
+  return results;
+};
+
 const getHomeJobStatusPoll = async (req, res) => {
   try {
+    const guestId = req.query.guestId || '';
     const votes = await PollVote.find({ pollKey: HOME_JOB_STATUS_POLL });
-
-    const results = pollOptions.reduce((acc, option) => {
-      acc[option] = 0;
-      return acc;
-    }, {});
-
-    votes.forEach((vote) => {
-      if (results[vote.option] !== undefined) {
-        results[vote.option] += 1;
-      }
-    });
 
     let userVote = '';
 
@@ -33,13 +38,20 @@ const getHomeJobStatusPoll = async (req, res) => {
       });
 
       userVote = existingVote?.option || '';
+    } else if (guestId) {
+      const existingVote = await PollVote.findOne({
+        pollKey: HOME_JOB_STATUS_POLL,
+        guestId,
+      });
+
+      userVote = existingVote?.option || '';
     }
 
     res.json({
       success: true,
       pollKey: HOME_JOB_STATUS_POLL,
       options: pollOptions,
-      results,
+      results: buildResults(votes),
       totalVotes: votes.length,
       userVote,
     });
@@ -54,7 +66,7 @@ const getHomeJobStatusPoll = async (req, res) => {
 
 const voteHomeJobStatusPoll = async (req, res) => {
   try {
-    const { option } = req.body;
+    const { option, guestId } = req.body;
 
     if (!pollOptions.includes(option)) {
       return res.status(400).json({
@@ -63,40 +75,49 @@ const voteHomeJobStatusPoll = async (req, res) => {
       });
     }
 
-    await PollVote.findOneAndUpdate(
-      {
-        pollKey: HOME_JOB_STATUS_POLL,
-        user: req.user._id,
-      },
-      {
-        pollKey: HOME_JOB_STATUS_POLL,
-        user: req.user._id,
-        option,
-      },
-      {
-        upsert: true,
-        returnDocument: 'after',
-        runValidators: true,
-      }
-    );
+    if (!req.user?._id && !guestId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify voter',
+      });
+    }
+
+    const filter = req.user?._id
+      ? {
+          pollKey: HOME_JOB_STATUS_POLL,
+          user: req.user._id,
+        }
+      : {
+          pollKey: HOME_JOB_STATUS_POLL,
+          guestId,
+        };
+
+    const update = req.user?._id
+      ? {
+          pollKey: HOME_JOB_STATUS_POLL,
+          user: req.user._id,
+          guestId: '',
+          option,
+        }
+      : {
+          pollKey: HOME_JOB_STATUS_POLL,
+          user: null,
+          guestId,
+          option,
+        };
+
+    await PollVote.findOneAndUpdate(filter, update, {
+      upsert: true,
+      returnDocument: 'after',
+      runValidators: true,
+    });
 
     const votes = await PollVote.find({ pollKey: HOME_JOB_STATUS_POLL });
-
-    const results = pollOptions.reduce((acc, item) => {
-      acc[item] = 0;
-      return acc;
-    }, {});
-
-    votes.forEach((vote) => {
-      if (results[vote.option] !== undefined) {
-        results[vote.option] += 1;
-      }
-    });
 
     res.json({
       success: true,
       message: 'Vote recorded successfully',
-      results,
+      results: buildResults(votes),
       totalVotes: votes.length,
       userVote: option,
     });

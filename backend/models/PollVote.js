@@ -11,7 +11,13 @@ const pollVoteSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
+    },
+
+    guestId: {
+      type: String,
+      default: '',
+      trim: true,
     },
 
     option: {
@@ -28,6 +34,24 @@ const pollVoteSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-pollVoteSchema.index({ pollKey: 1, user: 1 }, { unique: true });
+pollVoteSchema.index(
+  { pollKey: 1, user: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      user: { $type: 'objectId' },
+    },
+  }
+);
+
+pollVoteSchema.index(
+  { pollKey: 1, guestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      guestId: { $type: 'string', $ne: '' },
+    },
+  }
+);
 
 module.exports = mongoose.model('PollVote', pollVoteSchema);
