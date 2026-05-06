@@ -53,6 +53,7 @@ import JobSeekerAlerts from './pages/JobSeekerAlerts';
 import JobSeekerSavedJobs from './pages/JobSeekerSavedJobs';
 import JobSeekerApplications from './pages/JobSeekerApplications';
 import Profile from './pages/Profile';
+import HomePoll from './components/HomePoll';
 
 const API_URL =
   import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
@@ -281,7 +282,9 @@ function Home() {
                 </div>
               </div>
             </div>
+            <HomePoll />
           </div>
+
         </section>
 
         <section className="jobs-section" id="jobs">
