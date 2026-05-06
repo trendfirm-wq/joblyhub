@@ -72,11 +72,10 @@ const jobSchema = new mongoose.Schema(
     },
 
     category: {
-      type: String,
-      enum: JOB_CATEGORIES,
-      required: [true, 'Category is required'],
-    },
-
+  type: String,
+  required: [true, 'Category is required'],
+  trim: true,
+},
     location: {
       type: String,
       required: [true, 'Location is required'],
@@ -117,11 +116,10 @@ const jobSchema = new mongoose.Schema(
     },
 
     industry: {
-      type: String,
-      enum: ['', ...INDUSTRIES],
-      default: '',
-      trim: true,
-    },
+  type: String,
+  default: '',
+  trim: true,
+},
 
     companyWebsite: {
       type: String,
