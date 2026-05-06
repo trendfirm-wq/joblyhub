@@ -69,5 +69,6 @@ const protectOptional = async (req, res, next) => {
 };
 module.exports = {
   protect,
+  protectOptional,
   allowRoles,
 };
