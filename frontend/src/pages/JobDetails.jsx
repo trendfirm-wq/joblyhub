@@ -16,6 +16,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -56,21 +57,31 @@ export default function JobDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const fetchJob = async () => {
-    try {
-      setLoadingJob(true);
+ const fetchJob = async () => {
+  try {
+    setLoadingJob(true);
+    setError('');
 
-      const res = await axios.get(`${API_URL}/jobs/${id}`);
+    const res = await axios.get(`${API_URL}/jobs/${id}`);
 
-      setJob(res.data);
-      setError('');
-    } catch (err) {
-      setError('Unable to load this job. It may not be approved or available.');
-    } finally {
-      setLoadingJob(false);
+    const jobData = res.data?.job || res.data?.data || res.data;
+
+    if (!jobData || !jobData._id) {
+      throw new Error('Job not found');
     }
-  };
 
+    setJob(jobData);
+  } catch (err) {
+    console.log('Job details error:', err.response?.data || err.message);
+
+    setError(
+      err.response?.data?.message ||
+        'Unable to load this job. It may not be approved or available.'
+    );
+  } finally {
+    setLoadingJob(false);
+  }
+};
   const fetchMyResumes = async () => {
     if (!token) return;
 
@@ -140,11 +151,15 @@ export default function JobDetails() {
   };
 
   const formatDate = (dateValue) => {
-    if (!dateValue) return 'Not specified';
+  if (!dateValue) return 'Not specified';
 
-    return new Date(dateValue).toLocaleDateString();
-  };
-
+  return new Date(dateValue).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
   const getWorkType = (jobData) => {
     if (jobData.workType) return jobData.workType;
 
@@ -438,7 +453,17 @@ export default function JobDetails() {
                     <strong>{job.category || 'Uncategorized'}</strong>
                   </div>
                 </div>
-
+<div className="premium-job-stat-card">
+  <div className="premium-job-stat-icon">
+    <Building2 size={15} />
+  </div>
+  <div>
+    <span>Industry</span>
+    <strong>
+      {job.industry || job.companyIndustry || job.employer?.companyIndustry || 'Not specified'}
+    </strong>
+  </div>
+</div>
                 
               </div>
 
@@ -513,7 +538,10 @@ export default function JobDetails() {
                 Review the job details carefully before sending your
                 application.
               </p>
-
+<div className="job-safety-alert">
+  ⚠️ JoblyHub does not endorse payment requests during recruitment.
+  Never pay money for job applications, interviews, or employment offers.
+</div>
               {job.applicationMethod === 'email' && job.applicationEmail && (
                 <div className="apply-copy-email-box">
                   <span>Application Email</span>

@@ -16,19 +16,29 @@ const API_URL =
   import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 
 const categories = [
-  'Technology & IT',
-  'Business, Administration & Customer Service',
-  'Sales & Marketing',
-  'Finance & Accounting',
-  'Engineering & Technical',
-  'Healthcare & Medical',
-  'Education & Training',
-  'Transport & Logistics',
-  'Skilled Trades',
-  'Hospitality, Travel & Services',
+  'Agriculture & Farming',
+  'Business & Administration',
+  'Construction & Real Estate',
   'Creative & Design',
-  'NGO & Development',
+  'Customer Service & Support',
+  'Education & Training',
+  'Engineering & Technical',
+  'Finance & Accounting',
+  'Healthcare & Medical',
+  'Hospitality & Tourism',
+  'Human Resources & Recruitment',
+  'Legal & Compliance',
+  'Media & Communications',
+  'Mining, Energy & Extractives',
+  'Project Management',
+  'Sales & Marketing',
+  'Security Services',
+  'Skilled Trades & Artisans',
+  'Technology & IT',
+  'Transport & Logistics',
+  'General & Other Jobs',
 ];
+
 
 const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote'];
 
@@ -274,14 +284,7 @@ export default function JobsPage() {
 
             <div className="jobs-results-top">
               <div>
-                <span>Job Results</span>
-                <h2>
-                  {loadingJobs
-                    ? 'Loading jobs...'
-                    : `${jobs.length} approved job${
-                        jobs.length === 1 ? '' : 's'
-                      } found`}
-                </h2>
+                 
               </div>
             </div>
 

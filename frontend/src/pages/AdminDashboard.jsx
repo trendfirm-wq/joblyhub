@@ -455,6 +455,11 @@ export default function AdminDashboard() {
                     : 'Not provided'}
                 </strong>
               </div>
+
+              <div>
+  <span>Views</span>
+  <strong>{selectedJob.views || 0}</strong>
+</div>
             </div>
 
             <div className="admin-review-section">

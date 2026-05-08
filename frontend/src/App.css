@@ -7075,4 +7075,14 @@ body {
   color: #ffffff;
   font-weight: 700;
   line-height: 1.4;
+}.job-safety-alert {
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #7c2d12;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
 }

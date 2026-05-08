@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import './HomePoll.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL =
+  import.meta.env.VITE_API_URL || 'https://joblyhub-tc8k.onrender.com/api';
 
 const pollOptions = [
   'Actively looking',
@@ -17,6 +18,23 @@ const defaultVotes = {
   'Just browsing': 0,
 };
 
+const GUEST_ID_KEY = 'joblyhub_poll_guest_id';
+
+const getGuestId = () => {
+  let guestId = localStorage.getItem(GUEST_ID_KEY);
+
+  if (!guestId) {
+    guestId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `guest_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    localStorage.setItem(GUEST_ID_KEY, guestId);
+  }
+
+  return guestId;
+};
+
 export default function HomePoll() {
   const [selected, setSelected] = useState('');
   const [votes, setVotes] = useState(defaultVotes);
@@ -24,11 +42,13 @@ export default function HomePoll() {
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState('');
 
- const token =
-  localStorage.getItem('joblyhubToken') ||
-  localStorage.getItem('token') ||
-  localStorage.getItem('authToken') ||
-  localStorage.getItem('userToken');
+  const token =
+    localStorage.getItem('joblyhubToken') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('authToken') ||
+    localStorage.getItem('userToken');
+
+  const guestId = getGuestId();
 
   const totalVotes = useMemo(() => {
     return Object.values(votes).reduce(
@@ -42,16 +62,16 @@ export default function HomePoll() {
       setLoading(true);
       setError('');
 
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`${API_URL}/polls/home-job-status`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `${API_URL}/polls/home-job-status?guestId=${guestId}`,
+        {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {},
+        }
+      );
 
       const data = await res.json();
 
@@ -70,15 +90,11 @@ export default function HomePoll() {
 
   useEffect(() => {
     fetchPoll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleVote = async (option) => {
     try {
-      if (!token) {
-        setError('Please login to vote.');
-        return;
-      }
-
       if (selected === option) return;
 
       setVoting(true);
@@ -88,9 +104,12 @@ export default function HomePoll() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ option }),
+        body: JSON.stringify({
+          option,
+          guestId,
+        }),
       });
 
       const data = await res.json();
@@ -177,10 +196,8 @@ export default function HomePoll() {
               Total votes: <strong>{totalVotes}</strong> · You selected:{' '}
               <strong>{selected}</strong>
             </span>
-          ) : token ? (
-            <span>Select one option to vote.</span>
           ) : (
-            <span>Please login to take part in this poll.</span>
+            <span>Select one option to vote.</span>
           )}
         </div>
       </div>
