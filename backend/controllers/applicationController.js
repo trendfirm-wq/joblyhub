@@ -1,6 +1,7 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
+const ActivityLog = require('../models/ActivityLog');
 
 const APPLICANT_PUBLIC_FIELDS =
   'name email phone location preferredJobCategory highestQualification experienceLevel emailVerified phoneVerified';
@@ -17,8 +18,8 @@ const getClientIp = (req) => {
   );
 };
 
-const logSecurityEvent = (label, req, extra = {}) => {
-  console.log(label, {
+const logSecurityEvent = async (label, req, extra = {}) => {
+  const payload = {
     userId: req.user?._id,
     email: req.user?.email,
     role: req.user?.role,
@@ -27,13 +28,28 @@ const logSecurityEvent = (label, req, extra = {}) => {
     route: req.originalUrl,
     time: new Date().toISOString(),
     ...extra,
-  });
+  };
+
+  console.log(label, payload);
+
+  try {
+    await ActivityLog.create({
+      user: req.user?._id,
+      email: req.user?.email || '',
+      role: req.user?.role || '',
+      action: label.replace(':', ''),
+      route: req.originalUrl,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || '',
+      metadata: extra,
+    });
+  } catch (error) {
+    console.error('ACTIVITY LOG SAVE ERROR:', error.message);
+  }
 };
 
 const uploadPdfToCloudinary = async (file) => {
-  if (!file) {
-    return { url: '', publicId: '' };
-  }
+  if (!file) return { url: '', publicId: '' };
 
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -57,23 +73,19 @@ const uploadPdfToCloudinary = async (file) => {
 
 const applyForJob = async (req, res) => {
   try {
-    logSecurityEvent('APPLICATION SUBMIT STARTED:', req, {
+    await logSecurityEvent('APPLICATION SUBMIT STARTED:', req, {
       jobId: req.params.jobId,
     });
 
     const { fullName, email, phone, coverLetter, resumeLink } = req.body;
 
     if (!fullName || !email) {
-      return res.status(400).json({
-        message: 'Full name and email are required',
-      });
+      return res.status(400).json({ message: 'Full name and email are required' });
     }
 
     const job = await Job.findById(req.params.jobId);
 
-    if (!job) {
-      return res.status(404).json({ message: 'Job not found' });
-    }
+    if (!job) return res.status(404).json({ message: 'Job not found' });
 
     if (job.status !== 'approved' || !job.isActive) {
       return res.status(400).json({
@@ -103,27 +115,21 @@ const applyForJob = async (req, res) => {
 
     if (req.file) {
       if (req.file.mimetype !== 'application/pdf') {
-        return res.status(400).json({
-          message: 'Please upload one PDF document only',
-        });
+        return res.status(400).json({ message: 'Please upload one PDF document only' });
       }
 
       if (req.file.size > 5 * 1024 * 1024) {
-        return res.status(400).json({
-          message: 'PDF must be less than 5MB',
-        });
+        return res.status(400).json({ message: 'PDF must be less than 5MB' });
       }
 
       const uploadedPdf = await uploadPdfToCloudinary(req.file);
-
       applicationPdfUrl = uploadedPdf.url;
       applicationPdfPublicId = uploadedPdf.publicId;
     }
 
     if (!applicationPdfUrl && !resumeLink) {
       return res.status(400).json({
-        message:
-          'Please upload your cover letter and CV/resume as one PDF document',
+        message: 'Please upload your cover letter and CV/resume as one PDF document',
       });
     }
 
@@ -140,7 +146,7 @@ const applyForJob = async (req, res) => {
       status: 'submitted',
     });
 
-    logSecurityEvent('APPLICATION SUBMITTED SUCCESSFULLY:', req, {
+    await logSecurityEvent('APPLICATION SUBMITTED SUCCESSFULLY:', req, {
       applicationId: application._id,
       jobId: job._id,
       jobTitle: job.title,
@@ -162,11 +168,9 @@ const applyForJob = async (req, res) => {
 
 const getMyApplications = async (req, res) => {
   try {
-    logSecurityEvent('JOB SEEKER VIEWED OWN APPLICATIONS:', req);
+    await logSecurityEvent('JOB SEEKER VIEWED OWN APPLICATIONS:', req);
 
-    const applications = await Application.find({
-      applicant: req.user._id,
-    })
+    const applications = await Application.find({ applicant: req.user._id })
       .sort({ createdAt: -1 })
       .populate('job', JOB_PUBLIC_FIELDS);
 
@@ -184,15 +188,10 @@ const getEmployerApplications = async (req, res) => {
     let filter = {};
 
     if (req.user.role !== 'admin') {
-      const employerJobs = await Job.find({ employer: req.user._id }).select(
-        '_id title'
-      );
-
+      const employerJobs = await Job.find({ employer: req.user._id }).select('_id title');
       const jobIds = employerJobs.map((job) => job._id);
 
-      filter = {
-        job: { $in: jobIds },
-      };
+      filter = { job: { $in: jobIds } };
     }
 
     const applications = await Application.find(filter)
@@ -200,7 +199,7 @@ const getEmployerApplications = async (req, res) => {
       .populate('job', 'title companyName location jobType category')
       .populate('applicant', APPLICANT_PUBLIC_FIELDS);
 
-    logSecurityEvent('EMPLOYER VIEWED APPLICATIONS:', req, {
+    await logSecurityEvent('EMPLOYER VIEWED APPLICATIONS:', req, {
       applicationsCount: applications.length,
     });
 
@@ -220,7 +219,7 @@ const getAllApplicationsForAdmin = async (req, res) => {
       .populate('job', 'title companyName location jobType category')
       .populate('applicant', APPLICANT_PUBLIC_FIELDS);
 
-    logSecurityEvent('ADMIN VIEWED ALL APPLICATIONS:', req, {
+    await logSecurityEvent('ADMIN VIEWED ALL APPLICATIONS:', req, {
       applicationsCount: applications.length,
     });
 
@@ -254,45 +253,27 @@ const updateApplicationStatus = async (req, res) => {
       'rejected',
     ];
 
-    const allowedInterviewMethods = [
-      '',
-      'phone',
-      'whatsapp',
-      'in_person',
-      'online',
-    ];
+    const allowedInterviewMethods = ['', 'phone', 'whatsapp', 'in_person', 'online'];
 
     if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        message: 'Invalid application status',
-      });
+      return res.status(400).json({ message: 'Invalid application status' });
     }
 
-    if (
-      interviewMethod !== undefined &&
-      !allowedInterviewMethods.includes(interviewMethod)
-    ) {
-      return res.status(400).json({
-        message: 'Invalid interview method',
-      });
+    if (interviewMethod !== undefined && !allowedInterviewMethods.includes(interviewMethod)) {
+      return res.status(400).json({ message: 'Invalid interview method' });
     }
 
-    const application = await Application.findById(req.params.id).populate(
-      'job'
-    );
+    const application = await Application.findById(req.params.id).populate('job');
 
     if (!application) {
-      return res.status(404).json({
-        message: 'Application not found',
-      });
+      return res.status(404).json({ message: 'Application not found' });
     }
 
     const isAdmin = req.user.role === 'admin';
-    const isJobOwner =
-      application.job.employer.toString() === req.user._id.toString();
+    const isJobOwner = application.job.employer.toString() === req.user._id.toString();
 
     if (!isAdmin && !isJobOwner) {
-      logSecurityEvent('UNAUTHORIZED APPLICATION STATUS UPDATE ATTEMPT:', req, {
+      await logSecurityEvent('UNAUTHORIZED APPLICATION STATUS UPDATE ATTEMPT:', req, {
         applicationId: req.params.id,
       });
 
@@ -304,17 +285,13 @@ const updateApplicationStatus = async (req, res) => {
     application.status = status;
 
     if (employerNote !== undefined) application.employerNote = employerNote;
-    if (interviewDate !== undefined) {
-      application.interviewDate = interviewDate || undefined;
-    }
+    if (interviewDate !== undefined) application.interviewDate = interviewDate || undefined;
     if (interviewMethod !== undefined) application.interviewMethod = interviewMethod;
-    if (interviewLocation !== undefined) {
-      application.interviewLocation = interviewLocation;
-    }
+    if (interviewLocation !== undefined) application.interviewLocation = interviewLocation;
 
     const updatedApplication = await application.save();
 
-    logSecurityEvent('APPLICATION STATUS UPDATED:', req, {
+    await logSecurityEvent('APPLICATION STATUS UPDATED:', req, {
       applicationId: updatedApplication._id,
       jobId: application.job._id,
       jobTitle: application.job.title,

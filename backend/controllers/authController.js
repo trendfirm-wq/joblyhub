@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const ActivityLog = require('../models/ActivityLog');
 
 const getClientIp = (req) => {
   return (
@@ -8,6 +9,23 @@ const getClientIp = (req) => {
     req.ip ||
     ''
   );
+};
+
+const saveActivityLog = async (req, action, metadata = {}) => {
+  try {
+    await ActivityLog.create({
+      user: req.user?._id || metadata.userId,
+      email: req.user?.email || metadata.email || '',
+      role: req.user?.role || metadata.role || '',
+      action,
+      route: req.originalUrl,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || '',
+      metadata,
+    });
+  } catch (error) {
+    console.error('ACTIVITY LOG SAVE ERROR:', error.message);
+  }
 };
 
 const formatUserResponse = (user) => {
@@ -53,32 +71,25 @@ const registerUser = async (req, res) => {
       confirmPassword,
       role,
       phone,
-
       companyName,
       companyIndustry,
       companyWebsite,
       companyDescription,
       companyLogo,
-
       location,
       preferredJobCategory,
       highestQualification,
       experienceLevel,
       resumeUrl,
-
       agreedToTerms,
     } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({
-        message: 'Please provide name, email and password',
-      });
+      return res.status(400).json({ message: 'Please provide name, email and password' });
     }
 
     if (confirmPassword && password !== confirmPassword) {
-      return res.status(400).json({
-        message: 'Passwords do not match',
-      });
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
     if (!agreedToTerms) {
@@ -90,39 +101,28 @@ const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({
-        message: 'User already exists',
-      });
+      return res.status(400).json({ message: 'User already exists' });
     }
 
     const allowedRoles = ['employer', 'job_seeker'];
     let selectedRole = 'job_seeker';
 
-    if (role && allowedRoles.includes(role)) {
-      selectedRole = role;
+    if (role && allowedRoles.includes(role)) selectedRole = role;
+
+    if (selectedRole === 'employer' && (!companyName || !companyIndustry)) {
+      return res.status(400).json({
+        message: 'Company name and company industry are required',
+      });
     }
 
-    if (selectedRole === 'employer') {
-      if (!companyName || !companyIndustry) {
-        return res.status(400).json({
-          message: 'Company name and company industry are required',
-        });
-      }
-    }
-
-    if (selectedRole === 'job_seeker') {
-      if (
-        !phone ||
-        !location ||
-        !preferredJobCategory ||
-        !highestQualification ||
-        !experienceLevel
-      ) {
-        return res.status(400).json({
-          message:
-            'Phone, location, preferred job category, highest qualification and experience level are required',
-        });
-      }
+    if (
+      selectedRole === 'job_seeker' &&
+      (!phone || !location || !preferredJobCategory || !highestQualification || !experienceLevel)
+    ) {
+      return res.status(400).json({
+        message:
+          'Phone, location, preferred job category, highest qualification and experience level are required',
+      });
     }
 
     const user = await User.create({
@@ -135,17 +135,13 @@ const registerUser = async (req, res) => {
       companyName: selectedRole === 'employer' ? companyName || '' : '',
       companyIndustry: selectedRole === 'employer' ? companyIndustry || '' : '',
       companyWebsite: selectedRole === 'employer' ? companyWebsite || '' : '',
-      companyDescription:
-        selectedRole === 'employer' ? companyDescription || '' : '',
+      companyDescription: selectedRole === 'employer' ? companyDescription || '' : '',
       companyLogo: selectedRole === 'employer' ? companyLogo || '' : '',
 
       location: selectedRole === 'job_seeker' ? location || '' : '',
-      preferredJobCategory:
-        selectedRole === 'job_seeker' ? preferredJobCategory || '' : '',
-      highestQualification:
-        selectedRole === 'job_seeker' ? highestQualification || '' : '',
-      experienceLevel:
-        selectedRole === 'job_seeker' ? experienceLevel || '' : '',
+      preferredJobCategory: selectedRole === 'job_seeker' ? preferredJobCategory || '' : '',
+      highestQualification: selectedRole === 'job_seeker' ? highestQualification || '' : '',
+      experienceLevel: selectedRole === 'job_seeker' ? experienceLevel || '' : '',
       resumeUrl: selectedRole === 'job_seeker' ? resumeUrl || '' : '',
 
       agreedToTerms: Boolean(agreedToTerms),
@@ -158,6 +154,12 @@ const registerUser = async (req, res) => {
       ip: getClientIp(req),
       userAgent: req.headers['user-agent'] || '',
       time: new Date().toISOString(),
+    });
+
+    await saveActivityLog(req, 'USER_REGISTERED', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
     });
 
     res.status(201).json(formatUserResponse(user));
@@ -174,23 +176,25 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({
-        message: 'Please provide email and password',
-      });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({
-        message: 'Invalid email or password',
-      });
+      await saveActivityLog(req, 'FAILED_LOGIN_ATTEMPT', { email });
+
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     if (!user.isActive) {
-      return res.status(403).json({
-        message: 'Your account has been disabled',
+      await saveActivityLog(req, 'DISABLED_ACCOUNT_LOGIN_ATTEMPT', {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
       });
+
+      return res.status(403).json({ message: 'Your account has been disabled' });
     }
 
     const isMatch = await user.matchPassword(password);
@@ -203,9 +207,13 @@ const loginUser = async (req, res) => {
         time: new Date().toISOString(),
       });
 
-      return res.status(401).json({
-        message: 'Invalid email or password',
+      await saveActivityLog(req, 'FAILED_LOGIN_ATTEMPT', {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
       });
+
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     user.lastLoginAt = new Date();
@@ -221,6 +229,19 @@ const loginUser = async (req, res) => {
       ip: user.lastLoginIp,
       userAgent: user.lastLoginUserAgent,
       time: user.lastLoginAt.toISOString(),
+    });
+
+    await ActivityLog.create({
+      user: user._id,
+      email: user.email,
+      role: user.role,
+      action: 'USER_LOGIN',
+      route: req.originalUrl,
+      ip: user.lastLoginIp,
+      userAgent: user.lastLoginUserAgent,
+      metadata: {
+        loginTime: user.lastLoginAt,
+      },
     });
 
     res.json(formatUserResponse(user));
@@ -240,21 +261,15 @@ const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     const {
       name,
       phone,
-
       companyName,
       companyIndustry,
       companyWebsite,
       companyDescription,
-
       location,
       preferredJobCategory,
       highestQualification,
@@ -269,19 +284,13 @@ const updateProfile = async (req, res) => {
       if (companyName !== undefined) user.companyName = companyName;
       if (companyIndustry !== undefined) user.companyIndustry = companyIndustry;
       if (companyWebsite !== undefined) user.companyWebsite = companyWebsite;
-      if (companyDescription !== undefined) {
-        user.companyDescription = companyDescription;
-      }
+      if (companyDescription !== undefined) user.companyDescription = companyDescription;
     }
 
     if (user.role === 'job_seeker' || user.role === 'admin') {
       if (location !== undefined) user.location = location;
-      if (preferredJobCategory !== undefined) {
-        user.preferredJobCategory = preferredJobCategory;
-      }
-      if (highestQualification !== undefined) {
-        user.highestQualification = highestQualification;
-      }
+      if (preferredJobCategory !== undefined) user.preferredJobCategory = preferredJobCategory;
+      if (highestQualification !== undefined) user.highestQualification = highestQualification;
       if (experienceLevel !== undefined) user.experienceLevel = experienceLevel;
       if (resumeUrl !== undefined) user.resumeUrl = resumeUrl;
     }
@@ -295,6 +304,12 @@ const updateProfile = async (req, res) => {
       ip: getClientIp(req),
       userAgent: req.headers['user-agent'] || '',
       time: new Date().toISOString(),
+    });
+
+    await saveActivityLog(req, 'PROFILE_UPDATED', {
+      userId: updatedUser._id,
+      email: updatedUser.email,
+      role: updatedUser.role,
     });
 
     res.json({
