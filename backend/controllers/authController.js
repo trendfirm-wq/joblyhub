@@ -420,11 +420,75 @@ const rejectEmployer = async (req, res) => {
     });
   }
 };
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        message: 'Please provide current password, new password and confirm password',
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message: 'New passwords do not match',
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters',
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    const isMatch = await user.matchPassword(currentPassword);
+
+    if (!isMatch) {
+      await saveActivityLog(req, 'FAILED_PASSWORD_CHANGE_ATTEMPT', {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+      });
+
+      return res.status(401).json({
+        message: 'Current password is incorrect',
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    await saveActivityLog(req, 'PASSWORD_CHANGED', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    res.json({
+      message: 'Password changed successfully. Please login again.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to change password',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   registerUser,
   loginUser,
   getMe,
   updateProfile,
+  changePassword,
   getEmployersForAdmin,
   verifyEmployer,
   rejectEmployer,

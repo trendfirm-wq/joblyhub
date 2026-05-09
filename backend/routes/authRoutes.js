@@ -5,6 +5,7 @@ const {
   loginUser,
   getMe,
   updateProfile,
+  changePassword,
   getEmployersForAdmin,
   verifyEmployer,
   rejectEmployer,
@@ -18,6 +19,7 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
+router.put('/change-password', protect, changePassword);
 
 // Admin employer verification routes
 router.get(
