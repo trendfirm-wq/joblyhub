@@ -4,7 +4,7 @@ const cloudinary = require('../config/cloudinary');
 const ActivityLog = require('../models/ActivityLog');
 
 const APPLICANT_PUBLIC_FIELDS =
-  'name email phone location preferredJobCategory highestQualification experienceLevel emailVerified phoneVerified';
+  'name location preferredJobCategory highestQualification experienceLevel emailVerified phoneVerified';
 
 const JOB_PUBLIC_FIELDS =
   'title companyName location jobType category salary status applicationMethod applicationEmail applicationLink';
@@ -194,16 +194,38 @@ const getEmployerApplications = async (req, res) => {
       filter = { job: { $in: jobIds } };
     }
 
-    const applications = await Application.find(filter)
-      .sort({ createdAt: -1 })
-      .populate('job', 'title companyName location jobType category')
-      .populate('applicant', APPLICANT_PUBLIC_FIELDS);
+  const applications = await Application.find(filter)
+  .sort({ createdAt: -1 })
+  .populate('job', 'title companyName location jobType category')
+  .populate('applicant', APPLICANT_PUBLIC_FIELDS);
 
-    await logSecurityEvent('EMPLOYER VIEWED APPLICATIONS:', req, {
-      applicationsCount: applications.length,
-    });
+const contactAllowedStatuses = [
+  'shortlisted',
+  'contacted',
+  'interviewing',
+  'hired',
+];
 
-    res.json(applications);
+const protectedApplications = applications.map((application) => {
+  const app = application.toObject();
+
+  const canViewContact =
+    req.user.role === 'admin' ||
+    contactAllowedStatuses.includes(app.status);
+
+  if (!canViewContact) {
+    app.email = '';
+    app.phone = '';
+  }
+
+  return app;
+});
+
+await logSecurityEvent('EMPLOYER VIEWED APPLICATIONS:', req, {
+  applicationsCount: protectedApplications.length,
+});
+
+res.json(protectedApplications);
   } catch (error) {
     res.status(500).json({
       message: 'Failed to fetch employer applications',
