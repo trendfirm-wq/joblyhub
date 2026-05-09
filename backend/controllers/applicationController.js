@@ -8,12 +8,31 @@ const APPLICANT_PUBLIC_FIELDS =
 const JOB_PUBLIC_FIELDS =
   'title companyName location jobType category salary status applicationMethod applicationEmail applicationLink';
 
+const getClientIp = (req) => {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    req.ip ||
+    ''
+  );
+};
+
+const logSecurityEvent = (label, req, extra = {}) => {
+  console.log(label, {
+    userId: req.user?._id,
+    email: req.user?.email,
+    role: req.user?.role,
+    ip: getClientIp(req),
+    userAgent: req.headers['user-agent'] || '',
+    route: req.originalUrl,
+    time: new Date().toISOString(),
+    ...extra,
+  });
+};
+
 const uploadPdfToCloudinary = async (file) => {
   if (!file) {
-    return {
-      url: '',
-      publicId: '',
-    };
+    return { url: '', publicId: '' };
   }
 
   return new Promise((resolve, reject) => {
@@ -23,9 +42,7 @@ const uploadPdfToCloudinary = async (file) => {
         resource_type: 'raw',
       },
       (error, result) => {
-        if (error) {
-          return reject(error);
-        }
+        if (error) return reject(error);
 
         resolve({
           url: result.secure_url,
@@ -38,12 +55,11 @@ const uploadPdfToCloudinary = async (file) => {
   });
 };
 
-// @desc    Job seeker applies for a job
-// @route   POST /api/applications/:jobId/apply
-// @access  Job Seeker/Admin
 const applyForJob = async (req, res) => {
   try {
-    console.log('APPLICATION SUBMIT STARTED');
+    logSecurityEvent('APPLICATION SUBMIT STARTED:', req, {
+      jobId: req.params.jobId,
+    });
 
     const { fullName, email, phone, coverLetter, resumeLink } = req.body;
 
@@ -56,9 +72,7 @@ const applyForJob = async (req, res) => {
     const job = await Job.findById(req.params.jobId);
 
     if (!job) {
-      return res.status(404).json({
-        message: 'Job not found',
-      });
+      return res.status(404).json({ message: 'Job not found' });
     }
 
     if (job.status !== 'approved' || !job.isActive) {
@@ -88,13 +102,6 @@ const applyForJob = async (req, res) => {
     let applicationPdfPublicId = '';
 
     if (req.file) {
-      console.log(
-        'PDF received:',
-        req.file.originalname,
-        req.file.mimetype,
-        req.file.size
-      );
-
       if (req.file.mimetype !== 'application/pdf') {
         return res.status(400).json({
           message: 'Please upload one PDF document only',
@@ -107,11 +114,7 @@ const applyForJob = async (req, res) => {
         });
       }
 
-      console.log('Uploading PDF to Cloudinary...');
-
       const uploadedPdf = await uploadPdfToCloudinary(req.file);
-
-      console.log('PDF uploaded to Cloudinary:', uploadedPdf.url);
 
       applicationPdfUrl = uploadedPdf.url;
       applicationPdfPublicId = uploadedPdf.publicId;
@@ -137,7 +140,11 @@ const applyForJob = async (req, res) => {
       status: 'submitted',
     });
 
-    console.log('APPLICATION SAVED SUCCESSFULLY');
+    logSecurityEvent('APPLICATION SUBMITTED SUCCESSFULLY:', req, {
+      applicationId: application._id,
+      jobId: job._id,
+      jobTitle: job.title,
+    });
 
     res.status(201).json({
       message: 'Application submitted successfully',
@@ -153,11 +160,10 @@ const applyForJob = async (req, res) => {
   }
 };
 
-// @desc    Job seeker views own applications
-// @route   GET /api/applications/my-applications
-// @access  Job Seeker/Admin
 const getMyApplications = async (req, res) => {
   try {
+    logSecurityEvent('JOB SEEKER VIEWED OWN APPLICATIONS:', req);
+
     const applications = await Application.find({
       applicant: req.user._id,
     })
@@ -173,16 +179,13 @@ const getMyApplications = async (req, res) => {
   }
 };
 
-// @desc    Employer views applications for jobs they own
-// @route   GET /api/applications/employer
-// @access  Employer/Admin
 const getEmployerApplications = async (req, res) => {
   try {
     let filter = {};
 
     if (req.user.role !== 'admin') {
       const employerJobs = await Job.find({ employer: req.user._id }).select(
-        '_id'
+        '_id title'
       );
 
       const jobIds = employerJobs.map((job) => job._id);
@@ -197,6 +200,10 @@ const getEmployerApplications = async (req, res) => {
       .populate('job', 'title companyName location jobType category')
       .populate('applicant', APPLICANT_PUBLIC_FIELDS);
 
+    logSecurityEvent('EMPLOYER VIEWED APPLICATIONS:', req, {
+      applicationsCount: applications.length,
+    });
+
     res.json(applications);
   } catch (error) {
     res.status(500).json({
@@ -206,15 +213,16 @@ const getEmployerApplications = async (req, res) => {
   }
 };
 
-// @desc    Admin views all applications
-// @route   GET /api/applications/admin/all
-// @access  Admin
 const getAllApplicationsForAdmin = async (req, res) => {
   try {
     const applications = await Application.find()
       .sort({ createdAt: -1 })
       .populate('job', 'title companyName location jobType category')
       .populate('applicant', APPLICANT_PUBLIC_FIELDS);
+
+    logSecurityEvent('ADMIN VIEWED ALL APPLICATIONS:', req, {
+      applicationsCount: applications.length,
+    });
 
     res.json(applications);
   } catch (error) {
@@ -225,9 +233,6 @@ const getAllApplicationsForAdmin = async (req, res) => {
   }
 };
 
-// @desc    Employer/Admin updates application status
-// @route   PUT /api/applications/:id/status
-// @access  Employer/Admin
 const updateApplicationStatus = async (req, res) => {
   try {
     const {
@@ -287,6 +292,10 @@ const updateApplicationStatus = async (req, res) => {
       application.job.employer.toString() === req.user._id.toString();
 
     if (!isAdmin && !isJobOwner) {
+      logSecurityEvent('UNAUTHORIZED APPLICATION STATUS UPDATE ATTEMPT:', req, {
+        applicationId: req.params.id,
+      });
+
       return res.status(403).json({
         message: 'You are not allowed to update this application',
       });
@@ -294,23 +303,23 @@ const updateApplicationStatus = async (req, res) => {
 
     application.status = status;
 
-    if (employerNote !== undefined) {
-      application.employerNote = employerNote;
-    }
-
+    if (employerNote !== undefined) application.employerNote = employerNote;
     if (interviewDate !== undefined) {
       application.interviewDate = interviewDate || undefined;
     }
-
-    if (interviewMethod !== undefined) {
-      application.interviewMethod = interviewMethod;
-    }
-
+    if (interviewMethod !== undefined) application.interviewMethod = interviewMethod;
     if (interviewLocation !== undefined) {
       application.interviewLocation = interviewLocation;
     }
 
     const updatedApplication = await application.save();
+
+    logSecurityEvent('APPLICATION STATUS UPDATED:', req, {
+      applicationId: updatedApplication._id,
+      jobId: application.job._id,
+      jobTitle: application.job.title,
+      newStatus: status,
+    });
 
     res.json({
       message: 'Application status updated successfully',
