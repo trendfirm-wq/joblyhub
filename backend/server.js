@@ -23,12 +23,13 @@ app.use(
 // CORS
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://joblyhub.com',
-      'https://www.joblyhub.com',
-    ],
+   origin: [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://joblyhub.com',
+  'https://www.joblyhub.com',
+  'https://jobblyhub.netlify.app./',
+],
     credentials: true,
   })
 );
