@@ -331,11 +331,56 @@ const updateApplicationStatus = async (req, res) => {
     });
   }
 };
+const logPdfAccess = async (req, res) => {
+  try {
+    const { action } = req.body;
 
+    const application = await Application.findById(req.params.id).populate(
+      'job'
+    );
+
+    if (!application) {
+      return res.status(404).json({
+        message: 'Application not found',
+      });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    const isJobOwner =
+      application.job.employer.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isJobOwner) {
+      await logSecurityEvent('UNAUTHORIZED PDF ACCESS ATTEMPT:', req, {
+        applicationId: req.params.id,
+      });
+
+      return res.status(403).json({
+        message: 'You are not allowed to access this PDF',
+      });
+    }
+
+    await logSecurityEvent('APPLICATION PDF ACCESSED:', req, {
+      applicationId: application._id,
+      jobId: application.job._id,
+      jobTitle: application.job.title,
+      action: action || 'pdf_access',
+    });
+
+    res.json({
+      message: 'PDF access logged successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to log PDF access',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   applyForJob,
   getMyApplications,
   getEmployerApplications,
   getAllApplicationsForAdmin,
   updateApplicationStatus,
+  logPdfAccess,
 };

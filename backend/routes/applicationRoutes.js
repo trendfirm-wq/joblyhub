@@ -7,6 +7,7 @@ const {
   getEmployerApplications,
   getAllApplicationsForAdmin,
   updateApplicationStatus,
+  logPdfAccess,
 } = require('../controllers/applicationController');
 
 const { protect, allowRoles } = require('../middleware/authMiddleware');
@@ -61,7 +62,13 @@ router.get(
   allowRoles('admin'),
   getAllApplicationsForAdmin
 );
-
+// Employer/Admin logs PDF access
+router.post(
+  '/:id/log-pdf-access',
+  protect,
+  allowRoles('employer', 'admin'),
+  logPdfAccess
+);
 // Employer/Admin updates application status
 router.put(
   '/:id/status',
