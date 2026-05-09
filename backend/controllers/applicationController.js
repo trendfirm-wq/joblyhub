@@ -214,9 +214,11 @@ const protectedApplications = applications.map((application) => {
     contactAllowedStatuses.includes(app.status);
 
   if (!canViewContact) {
-    app.email = '';
-    app.phone = '';
-  }
+  app.email = '';
+  app.phone = '';
+  app.applicationPdfUrl = '';
+  app.resumeLink = '';
+}
 
   return app;
 });
