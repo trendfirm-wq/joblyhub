@@ -1,6 +1,15 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 
+const getClientIp = (req) => {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    req.ip ||
+    ''
+  );
+};
+
 const formatUserResponse = (user) => {
   return {
     _id: user._id,
@@ -22,10 +31,16 @@ const formatUserResponse = (user) => {
     resumeUrl: user.resumeUrl,
 
     agreedToTerms: user.agreedToTerms,
+    isActive: user.isActive,
+
+    lastLoginAt: user.lastLoginAt,
+    lastLoginIp: user.lastLoginIp,
+    lastLoginUserAgent: user.lastLoginUserAgent,
+
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
 
-    token: generateToken(user._id),
+    token: generateToken(user._id, user.tokenVersion),
   };
 };
 
@@ -81,7 +96,6 @@ const registerUser = async (req, res) => {
     }
 
     const allowedRoles = ['employer', 'job_seeker'];
-
     let selectedRole = 'job_seeker';
 
     if (role && allowedRoles.includes(role)) {
@@ -137,6 +151,15 @@ const registerUser = async (req, res) => {
       agreedToTerms: Boolean(agreedToTerms),
     });
 
+    console.log('USER REGISTERED:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || '',
+      time: new Date().toISOString(),
+    });
+
     res.status(201).json(formatUserResponse(user));
   } catch (error) {
     res.status(500).json({
@@ -173,10 +196,32 @@ const loginUser = async (req, res) => {
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
+      console.log('FAILED LOGIN ATTEMPT:', {
+        email,
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'] || '',
+        time: new Date().toISOString(),
+      });
+
       return res.status(401).json({
         message: 'Invalid email or password',
       });
     }
+
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = getClientIp(req);
+    user.lastLoginUserAgent = req.headers['user-agent'] || '';
+
+    await user.save();
+
+    console.log('USER LOGIN:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      ip: user.lastLoginIp,
+      userAgent: user.lastLoginUserAgent,
+      time: user.lastLoginAt.toISOString(),
+    });
 
     res.json(formatUserResponse(user));
   } catch (error) {
@@ -242,6 +287,15 @@ const updateProfile = async (req, res) => {
     }
 
     const updatedUser = await user.save();
+
+    console.log('PROFILE UPDATED:', {
+      userId: updatedUser._id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || '',
+      time: new Date().toISOString(),
+    });
 
     res.json({
       message: 'Profile updated successfully',

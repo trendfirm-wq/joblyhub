@@ -104,6 +104,30 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // Security / session tracking
+    lastLoginAt: {
+      type: Date,
+    },
+
+    lastLoginIp: {
+      type: String,
+      default: '',
+    },
+
+    lastLoginUserAgent: {
+      type: String,
+      default: '',
+    },
+
+    passwordChangedAt: {
+      type: Date,
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -117,6 +141,9 @@ userSchema.pre('save', async function () {
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+
+  this.passwordChangedAt = new Date();
+  this.tokenVersion += 1;
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
