@@ -1,6 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 dotenv.config();
@@ -9,12 +11,57 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.set('trust proxy', 1);
+
+// Security headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+// CORS
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://joblyhub.com',
+      'https://www.joblyhub.com',
+    ],
+    credentials: true,
+  })
+);
+
+// Body limit
+app.use(express.json({ limit: '1mb' }));
+
+// General API rate limit
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: {
+    message: 'Too many requests. Please try again later.',
+  },
+});
+
+// Stricter auth rate limit
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    message: 'Too many login/register attempts. Please try again later.',
+  },
+});
+
+app.use('/api', apiLimiter);
 
 app.get('/', (req, res) => {
   res.send('JoblyHub API is running...');
 });
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/jobs', require('./routes/jobRoutes'));
@@ -26,6 +73,7 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/polls', require('./routes/pollRoutes'));
 app.use('/api/fraud-reports', require('./routes/fraudReportRoutes'));
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
