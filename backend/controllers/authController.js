@@ -323,10 +323,109 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+const getEmployersForAdmin = async (req, res) => {
+  try {
+    const employers = await User.find({ role: 'employer' })
+      .select('-password')
+      .sort({ createdAt: -1 });
 
+    res.json(employers);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to fetch employers',
+      error: error.message,
+    });
+  }
+};
+
+const verifyEmployer = async (req, res) => {
+  try {
+    const employer = await User.findById(req.params.id);
+
+    if (!employer) {
+      return res.status(404).json({
+        message: 'Employer not found',
+      });
+    }
+
+    if (employer.role !== 'employer') {
+      return res.status(400).json({
+        message: 'Selected user is not an employer',
+      });
+    }
+
+    employer.isEmployerVerified = true;
+    employer.employerVerificationStatus = 'verified';
+    employer.employerVerificationNote = '';
+
+    const updatedEmployer = await employer.save();
+
+    await saveActivityLog(req, 'EMPLOYER_VERIFIED_BY_ADMIN', {
+      employerId: updatedEmployer._id,
+      employerEmail: updatedEmployer.email,
+      employerCompany: updatedEmployer.companyName,
+    });
+
+    res.json({
+      message: 'Employer verified successfully',
+      employer: formatUserResponse(updatedEmployer),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to verify employer',
+      error: error.message,
+    });
+  }
+};
+
+const rejectEmployer = async (req, res) => {
+  try {
+    const { note } = req.body;
+
+    const employer = await User.findById(req.params.id);
+
+    if (!employer) {
+      return res.status(404).json({
+        message: 'Employer not found',
+      });
+    }
+
+    if (employer.role !== 'employer') {
+      return res.status(400).json({
+        message: 'Selected user is not an employer',
+      });
+    }
+
+    employer.isEmployerVerified = false;
+    employer.employerVerificationStatus = 'rejected';
+    employer.employerVerificationNote = note || 'Employer verification rejected';
+
+    const updatedEmployer = await employer.save();
+
+    await saveActivityLog(req, 'EMPLOYER_REJECTED_BY_ADMIN', {
+      employerId: updatedEmployer._id,
+      employerEmail: updatedEmployer.email,
+      employerCompany: updatedEmployer.companyName,
+      note: updatedEmployer.employerVerificationNote,
+    });
+
+    res.json({
+      message: 'Employer rejected successfully',
+      employer: formatUserResponse(updatedEmployer),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to reject employer',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   registerUser,
   loginUser,
   getMe,
   updateProfile,
+  getEmployersForAdmin,
+  verifyEmployer,
+  rejectEmployer,
 };
