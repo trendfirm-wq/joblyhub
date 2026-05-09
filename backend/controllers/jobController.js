@@ -24,6 +24,7 @@ const uploadImageToCloudinary = async (file, folder) => {
 const createJob = async (req, res) => {
   try {
     const {
+
       title,
       category,
       location,
@@ -50,6 +51,15 @@ applicationMethod,
       contactEmail,
       contactPhone,
     } = req.body;
+    if (
+  req.user.role === 'employer' &&
+  !req.user.isEmployerVerified
+) {
+  return res.status(403).json({
+    message:
+      'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
+  });
+}Z
 
     if (
       !title ||

@@ -104,7 +104,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+isEmployerVerified: {
+  type: Boolean,
+  default: false,
+},
 
+employerVerificationStatus: {
+  type: String,
+  enum: ['not_submitted', 'pending', 'verified', 'rejected'],
+  default: 'not_submitted',
+},
+
+employerVerificationNote: {
+  type: String,
+  default: '',
+},
     // Security / session tracking
     lastLoginAt: {
       type: Date,
