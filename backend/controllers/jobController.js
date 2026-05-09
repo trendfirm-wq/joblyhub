@@ -6,7 +6,50 @@ const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     'base64'
   )}`;
+const detectJobRisk = (jobData = {}) => {
+  const riskyKeywords = [
+    'registration fee',
+    'processing fee',
+    'interview fee',
+    'appointment letter fee',
+    'medical fee',
+    'training fee',
+    'pay before interview',
+    'pay before appointment',
+    'send momo',
+    'mobile money',
+    'momo number',
+    'whatsapp only',
+    'agent fee',
+    'form fee',
+    'application fee',
+  ];
 
+  const content = [
+    jobData.title,
+    jobData.companyName,
+    jobData.description,
+    jobData.responsibilities,
+    jobData.requirements,
+    jobData.additionalInformation,
+    jobData.applicationInstructions,
+    jobData.contactPhone,
+    jobData.contactEmail,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const matchedFlags = riskyKeywords.filter((keyword) =>
+    content.includes(keyword)
+  );
+
+  return {
+    riskFlags: matchedFlags,
+    riskScore: matchedFlags.length,
+    requiresManualReview: matchedFlags.length > 0,
+  };
+};
   const uploadResult = await cloudinary.uploader.upload(base64Image, {
     folder,
     resource_type: 'image',
@@ -99,7 +142,17 @@ applicationMethod,
       companyLogo = uploadedLogo.url;
       companyLogoPublicId = uploadedLogo.publicId;
     }
-
+const riskCheck = detectJobRisk({
+  title,
+  companyName,
+  description,
+  responsibilities,
+  requirements,
+  additionalInformation,
+  applicationInstructions,
+  contactPhone,
+  contactEmail,
+});
     const job = await Job.create({
       employer: req.user._id,
 
@@ -117,6 +170,9 @@ applicationMethod,
 
       companyLogo,
       companyLogoPublicId,
+riskFlags: riskCheck.riskFlags,
+riskScore: riskCheck.riskScore,
+requiresManualReview: riskCheck.requiresManualReview,
 
       description,
 responsibilities: responsibilities || '',
@@ -404,7 +460,11 @@ const updateJob = async (req, res) => {
       job.status = 'pending';
       job.rejectionReason = '';
     }
+const riskCheck = detectJobRisk(job);
 
+job.riskFlags = riskCheck.riskFlags;
+job.riskScore = riskCheck.riskScore;
+job.requiresManualReview = riskCheck.requiresManualReview;
     const updatedJob = await job.save();
 
     res.json({

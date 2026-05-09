@@ -210,6 +210,20 @@ views: {
   type: Number,
   default: 0,
 },
+    riskFlags: {
+  type: [String],
+  default: [],
+},
+
+riskScore: {
+  type: Number,
+  default: 0,
+},
+
+requiresManualReview: {
+  type: Boolean,
+  default: false,
+},
     rejectionReason: {
       type: String,
       default: '',
