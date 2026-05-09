@@ -183,7 +183,10 @@ const getApprovedJobs = async (req, res) => {
 
     const jobs = await Job.find(filter)
       .sort({ createdAt: -1 })
-      .populate('employer', 'name email companyName');
+      .populate(
+  'employer',
+  'name email companyName isEmployerVerified employerVerificationStatus'
+);
 
     res.json(jobs);
   } catch (error) {
@@ -253,7 +256,10 @@ const getAllJobsForAdmin = async (req, res) => {
   try {
     const jobs = await Job.find()
       .sort({ createdAt: -1 })
-      .populate('employer', 'name email companyName phone');
+      .populate(
+  'employer',
+  'name email companyName phone isEmployerVerified employerVerificationStatus'
+);
 
     res.json(jobs);
   } catch (error) {
