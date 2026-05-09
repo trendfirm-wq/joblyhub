@@ -339,9 +339,17 @@ const approveJob = async (req, res) => {
       });
     }
 
-    job.status = 'approved';
-    job.rejectionReason = '';
-    job.isActive = true;
+   if (job.requiresManualReview && !req.body.confirmRiskApproval) {
+  return res.status(400).json({
+    message:
+      'This job has risk flags. Please confirm risk approval before approving.',
+    riskFlags: job.riskFlags,
+  });
+}
+
+job.status = 'approved';
+job.rejectionReason = '';
+job.isActive = true;
 
     const updatedJob = await job.save();
 
