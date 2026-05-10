@@ -67,7 +67,14 @@ const detectJobRisk = (jobData = {}) => {
 const createJob = async (req, res) => {
   try {
     const {
+} catch (error) {
+  console.error('CREATE JOB ERROR:', error);
 
+  res.status(500).json({
+    message: 'Failed to create job',
+    error: error.message,
+  });
+}
       title,
       category,
       location,
