@@ -150,6 +150,19 @@ employerVerificationNote: {
 resetPasswordExpires: {
   type: Date,
 },
+loginOtpCode: {
+  type: String,
+  default: '',
+},
+
+loginOtpExpires: {
+  type: Date,
+},
+
+twoFactorEnabled: {
+  type: Boolean,
+  default: true,
+},
   },
   {
     timestamps: true,

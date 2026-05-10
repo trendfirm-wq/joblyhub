@@ -217,7 +217,49 @@ const loginUser = async (req, res) => {
 
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+if (
+  (user.role === 'admin' || user.role === 'employer') &&
+  user.twoFactorEnabled
+) {
+  const otpCode = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
 
+  user.loginOtpCode = otpCode;
+  user.loginOtpExpires = Date.now() + 10 * 60 * 1000;
+
+  await user.save();
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Your JoblyHub Login Verification Code',
+    html: `
+      <div style="font-family: Arial, sans-serif; background:#f8f5f2; padding:24px;">
+        <div style="max-width:620px; margin:auto; background:#ffffff; border-radius:18px; padding:24px; border:1px solid #eadbd5;">
+          <h2 style="color:#502d55;">Login Verification</h2>
+
+          <p>Your JoblyHub verification code is:</p>
+
+          <div style="font-size:32px; font-weight:bold; letter-spacing:8px; margin:20px 0; color:#502d55;">
+            ${otpCode}
+          </div>
+
+          <p>This code expires in 10 minutes.</p>
+
+          <p style="margin-top:18px; color:#777; font-size:13px;">
+            If this was not you, secure your account immediately.
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  return res.json({
+    requiresOtp: true,
+    email: user.email,
+    message: 'Verification code sent to your email.',
+  });
+}
     user.lastLoginAt = new Date();
     user.lastLoginIp = getClientIp(req);
     user.lastLoginUserAgent = req.headers['user-agent'] || '';
@@ -630,6 +672,64 @@ const resetPassword = async (req, res) => {
     });
   }
 };
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const { email, otpCode } = req.body;
+
+    if (!email || !otpCode) {
+      return res.status(400).json({
+        message: 'Please provide email and verification code',
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    if (
+      user.loginOtpCode !== otpCode ||
+      !user.loginOtpExpires ||
+      user.loginOtpExpires < Date.now()
+    ) {
+      await saveActivityLog(req, 'FAILED_2FA_ATTEMPT', {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+      });
+
+      return res.status(401).json({
+        message: 'Invalid or expired verification code',
+      });
+    }
+
+    user.loginOtpCode = '';
+    user.loginOtpExpires = undefined;
+
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = getClientIp(req);
+    user.lastLoginUserAgent =
+      req.headers['user-agent'] || '';
+
+    await user.save();
+
+    await saveActivityLog(req, '2FA_LOGIN_SUCCESS', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    res.json(formatUserResponse(user));
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to verify login code',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   registerUser,
   loginUser,
@@ -641,4 +741,5 @@ module.exports = {
   getEmployersForAdmin,
   verifyEmployer,
   rejectEmployer,
+  verifyLoginOtp,
 };

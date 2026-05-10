@@ -11,6 +11,7 @@ const {
   rejectEmployer,
   forgotPassword,
 resetPassword,
+verifyLoginOtp,
 } = require('../controllers/authController');
 
 const { protect, allowRoles } = require('../middleware/authMiddleware');
@@ -24,6 +25,7 @@ router.put('/update-profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
+router.post('/verify-login-otp', verifyLoginOtp);
 
 // Admin employer verification routes
 router.get(
