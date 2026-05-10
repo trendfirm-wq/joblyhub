@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 
 // @desc    Admin gets user statistics
 // @route   GET /api/users/admin/stats
@@ -32,7 +33,21 @@ const getUserStats = async (req, res) => {
     });
   }
 };
+const getActivityLogsForAdmin = async (req, res) => {
+  try {
+    const logs = await ActivityLog.find()
+      .sort({ createdAt: -1 })
+      .limit(200);
 
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to fetch activity logs',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   getUserStats,
+  getActivityLogsForAdmin,
 };
