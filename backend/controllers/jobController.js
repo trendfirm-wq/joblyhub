@@ -67,14 +67,7 @@ const detectJobRisk = (jobData = {}) => {
 const createJob = async (req, res) => {
   try {
     const {
-} catch (error) {
-  console.error('CREATE JOB ERROR:', error);
 
-  res.status(500).json({
-    message: 'Failed to create job',
-    error: error.message,
-  });
-}
       title,
       category,
       location,
@@ -204,12 +197,14 @@ sendAdminJobAlert(job).catch((emailError) => {
       message: 'Job submitted successfully and is pending admin review',
       job,
     });
-  } catch (error) {
-    res.status(500).json({
-      message: 'Failed to create job',
-      error: error.message,
-    });
-  }
+ } catch (error) {
+  console.error('CREATE JOB ERROR:', error);
+
+  res.status(500).json({
+    message: 'Failed to create job',
+    error: error.message,
+  });
+}
 };
 
 // @desc    Public users view approved jobs
