@@ -142,6 +142,14 @@ employerVerificationNote: {
       type: Number,
       default: 0,
     },
+    resetPasswordToken: {
+  type: String,
+  default: '',
+},
+
+resetPasswordExpires: {
+  type: Date,
+},
   },
   {
     timestamps: true,

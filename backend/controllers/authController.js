@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const ActivityLog = require('../models/ActivityLog');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 const getClientIp = (req) => {
   return (
@@ -483,12 +485,159 @@ const changePassword = async (req, res) => {
     });
   }
 };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Please provide your email address',
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Do not reveal whether email exists
+    if (!user) {
+      return res.json({
+        message:
+          'If an account exists with this email, a password reset link has been sent.',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    const frontendUrl =
+      process.env.FRONTEND_URL || 'https://joblyhub.com';
+
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Reset your JoblyHub password',
+      html: `
+        <div style="font-family: Arial, sans-serif; background:#f8f5f2; padding:24px;">
+          <div style="max-width:620px; margin:auto; background:#ffffff; border-radius:18px; padding:24px; border:1px solid #eadbd5;">
+            <h2 style="margin:0 0 12px; color:#502d55;">Reset Your Password</h2>
+
+            <p style="color:#555; line-height:1.6;">
+              We received a request to reset your JoblyHub password.
+              Click the button below to create a new password.
+            </p>
+
+            <p style="color:#555; line-height:1.6;">
+              This link will expire in 15 minutes.
+            </p>
+
+            <a href="${resetUrl}"
+              style="display:inline-block; background:#502d55; color:#ffffff; padding:13px 18px; border-radius:12px; text-decoration:none; font-weight:bold;">
+              Reset Password
+            </a>
+
+            <p style="margin-top:18px; color:#777; font-size:13px;">
+              If you did not request this, please ignore this email.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    await saveActivityLog(req, 'PASSWORD_RESET_REQUESTED', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    res.json({
+      message:
+        'If an account exists with this email, a password reset link has been sent.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to process password reset request',
+      error: error.message,
+    });
+  }
+};
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password, confirmPassword } = req.body;
+
+    if (!password || !confirmPassword) {
+      return res.status(400).json({
+        message: 'Please provide password and confirm password',
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        message: 'Passwords do not match',
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters',
+      });
+    }
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'Password reset link is invalid or has expired',
+      });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = '';
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    await saveActivityLog(req, 'PASSWORD_RESET_COMPLETED', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    res.json({
+      message: 'Password reset successfully. Please login with your new password.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to reset password',
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   registerUser,
   loginUser,
   getMe,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
   getEmployersForAdmin,
   verifyEmployer,
   rejectEmployer,
