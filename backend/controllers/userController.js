@@ -35,11 +35,24 @@ const getUserStats = async (req, res) => {
 };
 const getActivityLogsForAdmin = async (req, res) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = 20;
+    const skip = (page - 1) * limit;
+
+    const totalLogs = await ActivityLog.countDocuments();
+
     const logs = await ActivityLog.find()
       .sort({ createdAt: -1 })
-      .limit(200);
+      .skip(skip)
+      .limit(limit);
 
-    res.json(logs);
+    res.json({
+      logs,
+      page,
+      limit,
+      totalLogs,
+      totalPages: Math.ceil(totalLogs / limit),
+    });
   } catch (error) {
     res.status(500).json({
       message: 'Failed to fetch activity logs',
