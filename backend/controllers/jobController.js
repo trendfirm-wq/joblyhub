@@ -6,6 +6,18 @@ const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     'base64'
   )}`;
+
+  const uploadResult = await cloudinary.uploader.upload(base64Image, {
+    folder,
+    resource_type: 'image',
+  });
+
+  return {
+    url: uploadResult.secure_url,
+    publicId: uploadResult.public_id,
+  };
+};
+
 const detectJobRisk = (jobData = {}) => {
   const riskyKeywords = [
     'registration fee',
@@ -50,16 +62,6 @@ const detectJobRisk = (jobData = {}) => {
     requiresManualReview: matchedFlags.length > 0,
   };
 };
-  const uploadResult = await cloudinary.uploader.upload(base64Image, {
-    folder,
-    resource_type: 'image',
-  });
-
-  return {
-    url: uploadResult.secure_url,
-    publicId: uploadResult.public_id,
-  };
-};
 
 // @desc    Employer creates a job
 // @route   POST /api/jobs
@@ -102,7 +104,7 @@ applicationMethod,
     message:
       'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
   });
-}Z
+}
 
     if (
       !title ||
