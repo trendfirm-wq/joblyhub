@@ -197,10 +197,12 @@ if (user.role === 'employer') {
 
     res.status(201).json(formatUserResponse(user));
   } catch (error) {
-    res.status(500).json({
-      message: 'Registration failed',
-      error: error.message,
-    });
+   console.error('REGISTER ERROR:', error);
+
+res.status(500).json({
+  message: 'Registration failed',
+  error: error.message,
+});
   }
 };
 
