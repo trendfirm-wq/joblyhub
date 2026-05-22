@@ -64,7 +64,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
-
+jobPostCode: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'JobPostCode',
+},
     // Job Seeker Profile
     location: {
       type: String,
