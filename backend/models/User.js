@@ -68,6 +68,10 @@ jobPostCode: {
   type: mongoose.Schema.Types.ObjectId,
   ref: 'JobPostCode',
 },
+hasReceivedFirstJobPostBonusCode: {
+  type: Boolean,
+  default: false,
+},
     // Job Seeker Profile
     location: {
       type: String,

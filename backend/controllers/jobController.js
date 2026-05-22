@@ -3,6 +3,25 @@ const cloudinary = require('../config/cloudinary');
 const sendAdminJobAlert = require('../utils/sendAdminJobAlert');
 const JobPostCode = require('../models/JobPostCode');
 
+const generateJobCode = () => {
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `JOBLY-${random}`;
+};
+
+const generateUniqueJobCode = async () => {
+  let code;
+  let exists = true;
+
+  while (exists) {
+    code = generateJobCode();
+    exists = await JobPostCode.findOne({ code });
+  }
+
+  return code;
+};
+
+
+
 const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     'base64'
@@ -95,7 +114,8 @@ const createJob = async (req, res) => {
   contactName,
   contactEmail,
   contactPhone,
-  jobPostCode,
+ jobPostCode,
+paidJobReference,
 } = req.body;
     if (
   req.user.role === 'employer' &&
@@ -107,25 +127,43 @@ const createJob = async (req, res) => {
   });
 }
 let validJobCode = null;
+let validPaidJobPayment = null;
 
 if (req.user.role === 'employer') {
-  if (!jobPostCode) {
+  if (!jobPostCode && !paidJobReference) {
     return res.status(400).json({
-      message: 'Job post code is required. Please pay for a job post first.',
+      message: 'Please pay for a job post or use a valid free job code.',
     });
   }
 
-  validJobCode = await JobPostCode.findOne({
-    code: String(jobPostCode).trim().toUpperCase(),
-    employer: req.user._id,
-    paymentStatus: 'completed',
-    isUsed: false,
-  });
-
-  if (!validJobCode) {
-    return res.status(400).json({
-      message: 'Invalid or already used job post code.',
+  if (paidJobReference) {
+    validPaidJobPayment = await JobPostCode.findOne({
+      paymentReference: String(paidJobReference).trim(),
+      employer: req.user._id,
+      paymentStatus: 'completed',
+      isUsed: false,
     });
+
+    if (!validPaidJobPayment) {
+      return res.status(400).json({
+        message: 'Invalid, pending, or already used payment reference.',
+      });
+    }
+  }
+
+  if (!validPaidJobPayment && jobPostCode) {
+    validJobCode = await JobPostCode.findOne({
+      code: String(jobPostCode).trim().toUpperCase(),
+      employer: req.user._id,
+      paymentStatus: 'completed',
+      isUsed: false,
+    });
+
+    if (!validJobCode) {
+      return res.status(400).json({
+        message: 'Invalid or already used free job code.',
+      });
+    }
   }
 }
     if (
@@ -180,7 +218,7 @@ const riskCheck = detectJobRisk({
     const job = await Job.create({
 
       employer: req.user._id,
-      jobPostCode: validJobCode?._id || null,
+      jobPostCode: validJobCode?._id || validPaidJobPayment?._id || null,
 
       title,
       category,
@@ -216,19 +254,47 @@ applicationMethod,
 
       status: 'pending',
     });
-if (validJobCode) {
-  validJobCode.isUsed = true;
-  validJobCode.usedForJob = job._id;
-  validJobCode.usedAt = new Date();
-  await validJobCode.save();
+const usedUnlock = validJobCode || validPaidJobPayment;
+
+if (usedUnlock) {
+  usedUnlock.isUsed = true;
+  usedUnlock.usedForJob = job._id;
+  usedUnlock.usedAt = new Date();
+  await usedUnlock.save();
 }
+
+let bonusCode = null;
+
+if (
+  validPaidJobPayment &&
+  req.user.role === 'employer' &&
+  !req.user.hasReceivedFirstJobPostBonusCode
+) {
+  const newCode = await generateUniqueJobCode();
+
+  bonusCode = await JobPostCode.create({
+    code: newCode,
+    employer: req.user._id,
+    amount: 0,
+    paymentReference: `BONUS_${Date.now()}_${req.user._id}`,
+    paymentStatus: 'completed',
+    isUsed: false,
+  });
+
+  req.user.hasReceivedFirstJobPostBonusCode = true;
+  await req.user.save();
+}
+
 sendAdminJobAlert(job).catch((emailError) => {
   console.log('Admin job alert email failed:', emailError.message);
 });
-    res.status(201).json({
-      message: 'Job submitted successfully and is pending admin review',
-      job,
-    });
+   res.status(201).json({
+  message: bonusCode
+    ? `Job submitted successfully. Your bonus free job code is ${bonusCode.code}`
+    : 'Job submitted successfully and is pending admin review',
+  job,
+  bonusCode: bonusCode?.code || null,
+});
  } catch (error) {
   console.error('CREATE JOB ERROR:', error);
 
