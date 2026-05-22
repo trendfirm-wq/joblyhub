@@ -23,19 +23,20 @@ app.use(
 // CORS
 app.use(
   cors({
-   origin: [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://joblyhub.com',
-  'https://www.joblyhub.com',
-  'https://jobblyhub.netlify.app./',
-],
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://joblyhub.com',
+      'https://www.joblyhub.com',
+      'https://jobblyhub.netlify.app',
+    ],
     credentials: true,
   })
 );
 
-// Body limit
+// Body parser MUST come before routes and rate limit routes
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // General API rate limit
 const apiLimiter = rateLimit({
