@@ -216,10 +216,17 @@ const getApprovedJobs = async (req, res) => {
   try {
     const { category, location, jobType, search } = req.query;
 
-    const filter = {
-      status: 'approved',
-      isActive: true,
-    };
+  const now = new Date();
+
+const filter = {
+  status: 'approved',
+  isActive: true,
+  $or: [
+    { deadline: { $exists: false } },
+    { deadline: null },
+    { deadline: { $gte: now } },
+  ],
+};
 
     if (category) {
       filter.category = category;
@@ -278,7 +285,11 @@ const getJobById = async (req, res) => {
         message: 'This job is not available publicly',
       });
     }
-
+if (job.deadline && job.deadline < new Date()) {
+  return res.status(404).json({
+    message: 'This job has expired',
+  });
+}
     job.views = (job.views || 0) + 1;
     await job.save();
 
