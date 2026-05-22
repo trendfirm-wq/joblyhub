@@ -135,7 +135,9 @@ if (req.user.role === 'employer') {
     }
   }
 
-  if (!validPaidJobPayment && jobPostCode) {
+  if (validPaidJobPayment) {
+  validJobCode = null;
+} else if (jobPostCode) {
     validJobCode = await JobPostCode.findOne({
       code: String(jobPostCode).trim().toUpperCase(),
       employer: req.user._id,
