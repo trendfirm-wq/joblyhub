@@ -9,22 +9,8 @@ const router = express.Router();
 
 const JOB_POST_FEE = 55;
 
-const generateJobCode = () => {
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `JOBLY-${random}`;
-};
+ 
 
-const generateUniqueJobCode = async () => {
-  let code;
-  let exists = true;
-
-  while (exists) {
-    code = generateJobCode();
-    exists = await JobPostCode.findOne({ code });
-  }
-
-  return code;
-};
 
 router.post('/hubtel/job-post/pay', protect, async (req, res) => {
   try {
@@ -168,29 +154,7 @@ router.post('/hubtel/job-post/callback', async (req, res) => {
     paymentRecord.paymentStatus = 'completed';
     await paymentRecord.save();
 
-const user = await User.findById(paymentRecord.employer);
 
-if (
-  user &&
-  user.role === 'employer' &&
-  !user.hasReceivedFirstJobPostBonusCode
-) {
-  const newCode = await generateUniqueJobCode();
-
-  await JobPostCode.create({
-    code: newCode,
-    employer: user._id,
-    amount: 0,
-    paymentReference: `BONUS_${Date.now()}_${user._id}`,
-    paymentStatus: 'completed',
-    isUsed: false,
-  });
-
-  user.hasReceivedFirstJobPostBonusCode = true;
-  await user.save();
-
-  console.log('FIRST PAYMENT BONUS CODE CREATED:', newCode);
-}
     return res.status(200).json({
       message: 'Payment successful. Job post unlocked.',
     });

@@ -12,7 +12,7 @@ const getClientIp = (req) => {
     ''
   );
 };
-
+const JobPostCode = require('../models/JobPostCode');
 const saveActivityLog = async (req, action, metadata = {}) => {
   try {
     await ActivityLog.create({
@@ -63,7 +63,22 @@ const formatUserResponse = (user) => {
     token: generateToken(user._id, user.tokenVersion),
   };
 };
+const generateJobCode = () => {
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `JOBLY-${random}`;
+};
 
+const generateUniqueJobCode = async () => {
+  let code;
+  let exists = true;
+
+  while (exists) {
+    code = generateJobCode();
+    exists = await JobPostCode.findOne({ code });
+  }
+
+  return code;
+};
 const registerUser = async (req, res) => {
   try {
     const {
@@ -148,7 +163,23 @@ const registerUser = async (req, res) => {
 
       agreedToTerms: Boolean(agreedToTerms),
     });
+if (user.role === 'employer') {
+  const freeCode = await generateUniqueJobCode();
 
+  const createdCode = await JobPostCode.create({
+    code: freeCode,
+    employer: user._id,
+    amount: 0,
+    paymentReference: `FREE_REGISTER_${Date.now()}_${user._id}`,
+    paymentStatus: 'completed',
+    isUsed: false,
+  });
+
+  user.jobPostCode = createdCode._id;
+  await user.save();
+
+  console.log('FREE EMPLOYER JOB CODE CREATED:', freeCode);
+}
     console.log('USER REGISTERED:', {
       userId: user._id,
       email: user.email,
