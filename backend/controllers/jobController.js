@@ -1,6 +1,7 @@
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
 const sendAdminJobAlert = require('../utils/sendAdminJobAlert');
+const JobPostCode = require('../models/JobPostCode');
 
 const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
@@ -68,34 +69,34 @@ const detectJobRisk = (jobData = {}) => {
 // @access  Employer/Admin
 const createJob = async (req, res) => {
   try {
-    const {
+  const {
+  title,
+  category,
+  location,
+  jobType,
+  salary,
+  deadline,
 
-      title,
-      category,
-      location,
-      jobType,
-      salary,
-      deadline,
+  companyName,
+  industry,
+  companyWebsite,
+  companyDescription,
 
-      companyName,
-      industry,
-      companyWebsite,
-      companyDescription,
+  description,
+  responsibilities,
+  requirements,
+  additionalInformation,
 
-      description,
-responsibilities,
-requirements,
-additionalInformation,
+  applicationMethod,
+  applicationEmail,
+  applicationLink,
+  applicationInstructions,
 
-applicationMethod,
-      applicationEmail,
-      applicationLink,
-      applicationInstructions,
-
-      contactName,
-      contactEmail,
-      contactPhone,
-    } = req.body;
+  contactName,
+  contactEmail,
+  contactPhone,
+  jobPostCode,
+} = req.body;
     if (
   req.user.role === 'employer' &&
   !req.user.isEmployerVerified
@@ -105,7 +106,28 @@ applicationMethod,
       'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
   });
 }
+let validJobCode = null;
 
+if (req.user.role === 'employer') {
+  if (!jobPostCode) {
+    return res.status(400).json({
+      message: 'Job post code is required. Please pay for a job post first.',
+    });
+  }
+
+  validJobCode = await JobPostCode.findOne({
+    code: String(jobPostCode).trim().toUpperCase(),
+    employer: req.user._id,
+    paymentStatus: 'completed',
+    isUsed: false,
+  });
+
+  if (!validJobCode) {
+    return res.status(400).json({
+      message: 'Invalid or already used job post code.',
+    });
+  }
+}
     if (
       !title ||
       !category ||
@@ -156,7 +178,9 @@ const riskCheck = detectJobRisk({
   contactEmail,
 });
     const job = await Job.create({
+
       employer: req.user._id,
+      jobPostCode: validJobCode?._id || null,
 
       title,
       category,
@@ -164,7 +188,7 @@ const riskCheck = detectJobRisk({
       jobType,
       salary: salary || '',
       deadline: deadline || null,
-
+      
       companyName,
       industry: industry || '',
       companyWebsite: companyWebsite || '',
@@ -192,6 +216,12 @@ applicationMethod,
 
       status: 'pending',
     });
+if (validJobCode) {
+  validJobCode.isUsed = true;
+  validJobCode.usedForJob = job._id;
+  validJobCode.usedAt = new Date();
+  await validJobCode.save();
+}
 sendAdminJobAlert(job).catch((emailError) => {
   console.log('Admin job alert email failed:', emailError.message);
 });
