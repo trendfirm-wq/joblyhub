@@ -99,7 +99,7 @@ const registerUser = async (req, res) => {
       experienceLevel,
       resumeUrl,
       agreedToTerms,
-    } = req.body;
+    } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please provide name, email and password' });
