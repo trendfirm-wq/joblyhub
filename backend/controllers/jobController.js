@@ -255,7 +255,14 @@ const filter = {
   'name email companyName isEmployerVerified employerVerificationStatus'
 );
 
-    res.json(jobs);
+   const totalApprovedJobs = await Job.countDocuments({
+  status: 'approved',
+});
+
+res.json({
+  jobs,
+  totalApprovedJobs,
+});
   } catch (error) {
     res.status(500).json({
       message: 'Failed to fetch jobs',
