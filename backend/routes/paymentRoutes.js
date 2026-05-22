@@ -193,6 +193,40 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
   }
 });
 
+router.get('/job-post/available-unlock', protect, async (req, res) => {
+  try {
+    const availablePaidUnlock = await JobPostCode.findOne({
+      employer: req.user._id,
+      paymentStatus: 'completed',
+      isUsed: false,
+      amount: JOB_POST_FEE,
+    }).sort({ createdAt: -1 });
+
+    const availableFreeCode = await JobPostCode.findOne({
+      employer: req.user._id,
+      paymentStatus: 'completed',
+      isUsed: false,
+      amount: 0,
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      hasAvailablePaidUnlock: !!availablePaidUnlock,
+      hasAvailableFreeCode: !!availableFreeCode,
+
+      paidUnlockReference:
+        availablePaidUnlock?.paymentReference || null,
+
+      freeCode:
+        availableFreeCode?.code || null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to check available unlocks',
+      error: error.message,
+    });
+  }
+});
+
 router.get('/job-post/my-codes', protect, async (req, res) => {
   try {
     const codes = await JobPostCode.find({
