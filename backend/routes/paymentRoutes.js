@@ -271,7 +271,7 @@ router.get('/job-post/my-codes', protect, async (req, res) => {
   try {
     const codes = await JobPostCode.find({
       employer: req.user._id,
-      amount: 0,
+      paymentStatus: 'completed',
     })
       .populate('usedForJob', 'title status createdAt')
       .sort({ createdAt: -1 });
