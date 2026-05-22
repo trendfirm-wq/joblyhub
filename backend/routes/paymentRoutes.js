@@ -9,23 +9,6 @@ const router = express.Router();
 
 const JOB_POST_FEE = 55;
 
-const generateJobCode = () => {
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `JOBLY-${random}`;
-};
-
-const generateUniqueCode = async () => {
-  let code;
-  let exists = true;
-
-  while (exists) {
-    code = generateJobCode();
-    exists = await JobPostCode.findOne({ code });
-  }
-
-  return code;
-};
-
 router.post('/hubtel/job-post/pay', protect, async (req, res) => {
   try {
     if (req.user.role !== 'employer' && req.user.role !== 'admin') {
@@ -55,7 +38,8 @@ router.post('/hubtel/job-post/pay', protect, async (req, res) => {
       amount: JOB_POST_FEE,
       paymentReference: reference,
       paymentStatus: 'pending',
-      code: await generateUniqueCode(),
+      code: reference,
+      isUsed: false,
     });
 
     const payload = {
@@ -139,11 +123,11 @@ router.post('/hubtel/job-post/callback', async (req, res) => {
       });
     }
 
-    const jobCode = await JobPostCode.findOne({
+    const paymentRecord = await JobPostCode.findOne({
       paymentReference: reference,
     });
 
-    if (!jobCode) {
+    if (!paymentRecord) {
       return res.status(404).json({
         message: 'Payment record not found',
       });
@@ -156,21 +140,19 @@ router.post('/hubtel/job-post/callback', async (req, res) => {
       String(status) === '0000';
 
     if (!paid) {
-      jobCode.paymentStatus = 'failed';
-      await jobCode.save();
+      paymentRecord.paymentStatus = 'failed';
+      await paymentRecord.save();
 
       return res.status(200).json({
         message: 'Payment not successful',
       });
     }
 
-    jobCode.paymentStatus = 'completed';
-    await jobCode.save();
-
-    console.log('JOB POST CODE ACTIVATED:', jobCode.code);
+    paymentRecord.paymentStatus = 'completed';
+    await paymentRecord.save();
 
     return res.status(200).json({
-      message: 'Payment successful. Job post code activated.',
+      message: 'Payment successful. Job post unlocked.',
     });
   } catch (error) {
     console.error('JOB POST CALLBACK ERROR:', error);
@@ -185,12 +167,12 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
   try {
     const { reference } = req.params;
 
-    const jobCode = await JobPostCode.findOne({
+    const paymentRecord = await JobPostCode.findOne({
       employer: req.user._id,
       paymentReference: reference,
     });
 
-    if (!jobCode) {
+    if (!paymentRecord) {
       return res.status(404).json({
         message: 'Payment record not found',
       });
@@ -198,10 +180,10 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
 
     return res.json({
       success: true,
-      paymentStatus: jobCode.paymentStatus,
-      code: jobCode.paymentStatus === 'completed' ? jobCode.code : '',
-      isUsed: jobCode.isUsed,
-      amount: jobCode.amount,
+      paymentReference: paymentRecord.paymentReference,
+      paymentStatus: paymentRecord.paymentStatus,
+      isUsed: paymentRecord.isUsed,
+      amount: paymentRecord.amount,
     });
   } catch (error) {
     return res.status(500).json({
@@ -216,6 +198,7 @@ router.get('/job-post/my-codes', protect, async (req, res) => {
     const codes = await JobPostCode.find({
       employer: req.user._id,
       paymentStatus: 'completed',
+      amount: 0,
     }).sort({ createdAt: -1 });
 
     res.json(codes);
