@@ -3,23 +3,7 @@ const cloudinary = require('../config/cloudinary');
 const sendAdminJobAlert = require('../utils/sendAdminJobAlert');
 const JobPostCode = require('../models/JobPostCode');
 
-const generateJobCode = () => {
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `JOBLY-${random}`;
-};
-
-const generateUniqueJobCode = async () => {
-  let code;
-  let exists = true;
-
-  while (exists) {
-    code = generateJobCode();
-    exists = await JobPostCode.findOne({ code });
-  }
-
-  return code;
-};
-
+ 
 
 
 const uploadImageToCloudinary = async (file, folder) => {
@@ -263,37 +247,14 @@ if (usedUnlock) {
   await usedUnlock.save();
 }
 
-let bonusCode = null;
-
-if (
-  validPaidJobPayment &&
-  req.user.role === 'employer' &&
-  !req.user.hasReceivedFirstJobPostBonusCode
-) {
-  const newCode = await generateUniqueJobCode();
-
-  bonusCode = await JobPostCode.create({
-    code: newCode,
-    employer: req.user._id,
-    amount: 0,
-    paymentReference: `BONUS_${Date.now()}_${req.user._id}`,
-    paymentStatus: 'completed',
-    isUsed: false,
-  });
-
-  req.user.hasReceivedFirstJobPostBonusCode = true;
-  await req.user.save();
-}
+ 
 
 sendAdminJobAlert(job).catch((emailError) => {
   console.log('Admin job alert email failed:', emailError.message);
 });
-   res.status(201).json({
-  message: bonusCode
-    ? `Job submitted successfully. Your bonus free job code is ${bonusCode.code}`
-    : 'Job submitted successfully and is pending admin review',
+ res.status(201).json({
+  message: 'Job submitted successfully and is pending admin review',
   job,
-  bonusCode: bonusCode?.code || null,
 });
  } catch (error) {
   console.error('CREATE JOB ERROR:', error);
