@@ -2,39 +2,35 @@ const express = require('express');
 const axios = require('axios');
 
 const User = require('../models/User');
+const JobPostCode = require('../models/JobPostCode');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-const PLANS = {
-  starter: {
-    amount: 55,
-    postLimit: 15,
-  },
-  premium: {
-    amount: 450,
-    postLimit: 120,
-  },
-  enterprise: {
-    amount: 2500,
-    postLimit: 999999,
-  },
+const JOB_POST_FEE = 55;
+
+const generateJobCode = () => {
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `JOBLY-${random}`;
 };
 
-const getExpiryDate = () => {
-  const start = new Date();
-  const expiry = new Date(start);
-  expiry.setMonth(expiry.getMonth() + 1);
-  return { start, expiry };
+const generateUniqueCode = async () => {
+  let code;
+  let exists = true;
+
+  while (exists) {
+    code = generateJobCode();
+    exists = await JobPostCode.findOne({ code });
+  }
+
+  return code;
 };
 
-router.post('/hubtel/pay', protect, async (req, res) => {
+router.post('/hubtel/job-post/pay', protect, async (req, res) => {
   try {
-    const { plan } = req.body;
-
-    if (!plan || !PLANS[plan]) {
-      return res.status(400).json({
-        message: 'Invalid plan selected',
+    if (req.user.role !== 'employer' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Only employers can pay to post jobs',
       });
     }
 
@@ -46,36 +42,7 @@ router.post('/hubtel/pay', protect, async (req, res) => {
       });
     }
 
-    if (user.role !== 'employer' && user.role !== 'admin') {
-      return res.status(403).json({
-        message: 'Only employers can upgrade plans',
-      });
-    }
-
-    if (
-      user.subscriptionStatus === 'active' &&
-      user.subscriptionExpiry &&
-      new Date(user.subscriptionExpiry) <= new Date()
-    ) {
-      user.subscriptionStatus = 'expired';
-      user.plan = 'free';
-      await user.save();
-    }
-
-    if (
-      user.subscriptionStatus === 'active' &&
-      user.plan === plan &&
-      user.subscriptionExpiry &&
-      new Date(user.subscriptionExpiry) > new Date()
-    ) {
-      return res.status(400).json({
-        message: 'You already have this active plan',
-      });
-    }
-
-    const amount = PLANS[plan].amount;
-
-    const reference = `JOBLYHUB_${Date.now()}_${Math.floor(
+    const reference = `JOBLYHUB_JOB_${Date.now()}_${Math.floor(
       Math.random() * 10000
     )}`;
 
@@ -83,14 +50,17 @@ router.post('/hubtel/pay', protect, async (req, res) => {
       `${process.env.HUBTEL_CLIENT_ID}:${process.env.HUBTEL_CLIENT_SECRET}`
     ).toString('base64');
 
-    user.paymentReference = reference;
-    user.paymentStatus = 'pending';
-    user.pendingPlan = plan;
-    await user.save();
+    await JobPostCode.create({
+      employer: user._id,
+      amount: JOB_POST_FEE,
+      paymentReference: reference,
+      paymentStatus: 'pending',
+      code: await generateUniqueCode(),
+    });
 
     const payload = {
-      totalAmount: Number(amount.toFixed(2)),
-      description: `JoblyHub ${plan} job posting plan`,
+      totalAmount: JOB_POST_FEE,
+      description: 'JoblyHub job posting fee',
       callbackUrl: process.env.HUBTEL_CALLBACK_URL,
       returnUrl: process.env.HUBTEL_RETURN_URL,
       cancellationUrl:
@@ -100,8 +70,6 @@ router.post('/hubtel/pay', protect, async (req, res) => {
         process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER,
       clientReference: reference,
     };
-
-    console.log('JOBLYHUB HUBTEL REQUEST:', payload);
 
     const response = await axios.post(
       'https://payproxyapi.hubtel.com/items/initiate',
@@ -114,13 +82,13 @@ router.post('/hubtel/pay', protect, async (req, res) => {
       }
     );
 
-    console.log('JOBLYHUB HUBTEL RESPONSE:', response.data);
-
     const checkoutUrl = response.data?.data?.checkoutUrl;
 
     if (!checkoutUrl) {
-      user.paymentStatus = 'failed';
-      await user.save();
+      await JobPostCode.findOneAndUpdate(
+        { paymentReference: reference },
+        { paymentStatus: 'failed' }
+      );
 
       return res.status(500).json({
         message: 'No checkout URL returned from Hubtel',
@@ -131,33 +99,22 @@ router.post('/hubtel/pay', protect, async (req, res) => {
       success: true,
       checkoutUrl,
       reference,
-      plan,
-      amount,
+      amount: JOB_POST_FEE,
     });
   } catch (error) {
-    console.log('JOBLYHUB HUBTEL ERROR:', error.response?.data || error.message);
-
-    try {
-      const user = await User.findById(req.user?._id);
-      if (user) {
-        user.paymentStatus = 'failed';
-        await user.save();
-      }
-    } catch (saveError) {
-      console.log('FAILED TO MARK PAYMENT FAILED:', saveError.message);
-    }
+    console.log('JOB POST PAYMENT ERROR:', error.response?.data || error.message);
 
     return res.status(500).json({
-      message: 'Hubtel payment failed',
+      message: 'Failed to start job post payment',
       error: error.response?.data || error.message,
     });
   }
 });
 
-router.post('/hubtel/callback', async (req, res) => {
+router.post('/hubtel/job-post/callback', async (req, res) => {
   try {
     console.log(
-      'JOBLYHUB HUBTEL CALLBACK BODY:',
+      'JOBLYHUB JOB POST CALLBACK:',
       JSON.stringify(req.body, null, 2)
     );
 
@@ -178,15 +135,17 @@ router.post('/hubtel/callback', async (req, res) => {
 
     if (!reference) {
       return res.status(400).json({
-        message: 'No payment reference found in callback',
+        message: 'No payment reference found',
       });
     }
 
-    const user = await User.findOne({ paymentReference: reference });
+    const jobCode = await JobPostCode.findOne({
+      paymentReference: reference,
+    });
 
-    if (!user) {
+    if (!jobCode) {
       return res.status(404).json({
-        message: 'User not found for reference',
+        message: 'Payment record not found',
       });
     }
 
@@ -197,60 +156,41 @@ router.post('/hubtel/callback', async (req, res) => {
       String(status) === '0000';
 
     if (!paid) {
-      user.paymentStatus = 'failed';
-      await user.save();
+      jobCode.paymentStatus = 'failed';
+      await jobCode.save();
 
       return res.status(200).json({
         message: 'Payment not successful',
       });
     }
 
-    const plan = user.pendingPlan;
+    jobCode.paymentStatus = 'completed';
+    await jobCode.save();
 
-    if (!plan || !PLANS[plan]) {
-      return res.status(400).json({
-        message: 'No valid pending plan found',
-      });
-    }
-
-    const { start, expiry } = getExpiryDate();
-
-    user.paymentStatus = 'completed';
-    user.subscriptionStatus = 'active';
-    user.plan = plan;
-    user.subscriptionStart = start;
-    user.subscriptionExpiry = expiry;
-    user.pendingPlan = '';
-    user.postsUsedThisMonth = 0;
-    user.lastPostReset = new Date();
-    user.cancelAtExpiry = false;
-
-    await user.save();
-
-    console.log('JOBLYHUB PLAN ACTIVATED:', user.email, plan);
+    console.log('JOB POST CODE ACTIVATED:', jobCode.code);
 
     return res.status(200).json({
-      message: 'Callback processed successfully',
+      message: 'Payment successful. Job post code activated.',
     });
   } catch (error) {
-    console.error('JOBLYHUB HUBTEL CALLBACK ERROR:', error);
+    console.error('JOB POST CALLBACK ERROR:', error);
 
     return res.status(500).json({
-      message: 'Server error in callback',
+      message: 'Server error in job post callback',
     });
   }
 });
 
-router.get('/hubtel/status/:reference', protect, async (req, res) => {
+router.get('/job-post/status/:reference', protect, async (req, res) => {
   try {
     const { reference } = req.params;
 
-    const user = await User.findOne({
-      _id: req.user._id,
+    const jobCode = await JobPostCode.findOne({
+      employer: req.user._id,
       paymentReference: reference,
-    }).select('-password');
+    });
 
-    if (!user) {
+    if (!jobCode) {
       return res.status(404).json({
         message: 'Payment record not found',
       });
@@ -258,60 +198,31 @@ router.get('/hubtel/status/:reference', protect, async (req, res) => {
 
     return res.json({
       success: true,
-      paymentReference: user.paymentReference,
-      paymentStatus: user.paymentStatus,
-      subscriptionStatus: user.subscriptionStatus,
-      plan: user.plan,
-      subscriptionStart: user.subscriptionStart,
-      subscriptionExpiry: user.subscriptionExpiry,
-      postsUsedThisMonth: user.postsUsedThisMonth || 0,
-      monthlyPostLimit: user.plan === 'free' ? 5 : PLANS[user.plan]?.postLimit || 5,
+      paymentStatus: jobCode.paymentStatus,
+      code: jobCode.paymentStatus === 'completed' ? jobCode.code : '',
+      isUsed: jobCode.isUsed,
+      amount: jobCode.amount,
     });
   } catch (error) {
-    console.error('JOBLYHUB PAYMENT STATUS ERROR:', error);
-
     return res.status(500).json({
-      message: 'Server error',
+      message: 'Failed to check payment status',
+      error: error.message,
     });
   }
 });
 
-router.post('/cancel', protect, async (req, res) => {
+router.get('/job-post/my-codes', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const codes = await JobPostCode.find({
+      employer: req.user._id,
+      paymentStatus: 'completed',
+    }).sort({ createdAt: -1 });
 
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
-    }
-
-    if (user.subscriptionStatus !== 'active') {
-      return res.status(400).json({
-        message: 'No active subscription to cancel',
-      });
-    }
-
-    if (user.cancelAtExpiry) {
-      return res.status(400).json({
-        message: 'Subscription already set to cancel',
-      });
-    }
-
-    user.cancelAtExpiry = true;
-    await user.save();
-
-    return res.json({
-      success: true,
-      message: 'Subscription will end on expiry date',
-      cancelAtExpiry: true,
-      subscriptionExpiry: user.subscriptionExpiry,
-    });
+    res.json(codes);
   } catch (error) {
-    console.error('JOBLYHUB CANCEL SUBSCRIPTION ERROR:', error);
-
-    return res.status(500).json({
-      message: 'Server error',
+    res.status(500).json({
+      message: 'Failed to fetch job post codes',
+      error: error.message,
     });
   }
 });
