@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const sendEmail = require('../utils/sendEmail');
 
 const User = require('../models/User');
  
@@ -173,7 +174,25 @@ job.submittedForReviewAt = new Date();
 
 await job.save();
 
+try {
+  await sendEmail({
+    to: process.env.ADMIN_ALERT_EMAIL,
+    subject: `New paid job pending review: ${job.title}`,
+    html: `
+      <h2>New Paid Job Pending Review</h2>
+      <p>A paid job has been submitted and is waiting for admin review.</p>
 
+      <p><strong>Job Title:</strong> ${job.title}</p>
+      <p><strong>Company:</strong> ${job.companyName || 'Not provided'}</p>
+      <p><strong>Payment Reference:</strong> ${job.paymentReference}</p>
+      <p><strong>Status:</strong> Pending Review</p>
+
+      <p>Please login to the JoblyHub admin dashboard to approve or reject this job.</p>
+    `,
+  });
+} catch (emailError) {
+  console.log('Admin job review email failed:', emailError.message);
+}
     return res.status(200).json({
       message: 'Payment successful. Job post unlocked.',
     });
