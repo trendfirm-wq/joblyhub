@@ -1,10 +1,6 @@
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
-const sendAdminJobAlert = require('../utils/sendAdminJobAlert');
-const JobPostCode = require('../models/JobPostCode');
-
  
-
 
 const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
@@ -72,86 +68,41 @@ const detectJobRisk = (jobData = {}) => {
 // @access  Employer/Admin
 const createJob = async (req, res) => {
   try {
-  const {
-  title,
-  category,
-  location,
-  jobType,
-  salary,
-  deadline,
+    const {
+      title,
+      category,
+      location,
+      jobType,
+      salary,
+      deadline,
 
-  companyName,
-  industry,
-  companyWebsite,
-  companyDescription,
+      companyName,
+      industry,
+      companyWebsite,
+      companyDescription,
 
-  description,
-  responsibilities,
-  requirements,
-  additionalInformation,
+      description,
+      responsibilities,
+      requirements,
+      additionalInformation,
 
-  applicationMethod,
-  applicationEmail,
-  applicationLink,
-  applicationInstructions,
+      applicationMethod,
+      applicationEmail,
+      applicationLink,
+      applicationInstructions,
 
-  contactName,
-  contactEmail,
-  contactPhone,
- jobPostCode,
-paidJobReference,
-} = req.body;
-    if (
-  req.user.role === 'employer' &&
-  !req.user.isEmployerVerified
-) {
-  return res.status(403).json({
-    message:
-      'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
-  });
-}
-let validJobCode = null;
-let validPaidJobPayment = null;
+      contactName,
+      contactEmail,
+      contactPhone,
+    } = req.body;
 
-if (req.user.role === 'employer') {
-  if (!jobPostCode && !paidJobReference) {
-    return res.status(400).json({
-      message: 'Please pay for a job post or use a valid free job code.',
-    });
-  }
-
-  if (paidJobReference) {
-    validPaidJobPayment = await JobPostCode.findOne({
-      paymentReference: String(paidJobReference).trim(),
-      employer: req.user._id,
-      paymentStatus: 'completed',
-      isUsed: false,
-    });
-
-    if (!validPaidJobPayment) {
-      return res.status(400).json({
-        message: 'Invalid, pending, or already used payment reference.',
+    if (req.user.role === 'employer' && !req.user.isEmployerVerified) {
+      return res.status(403).json({
+        message:
+          'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
       });
     }
-  }
 
-  if (validPaidJobPayment) {
-  validJobCode = null;
-} else if (jobPostCode) {
-    validJobCode = await JobPostCode.findOne({
-      code: String(jobPostCode).trim().toUpperCase(),
-      employer: req.user._id,
-      paymentStatus: 'completed',
-      isUsed: false,
-    });
-
-    if (!validJobCode) {
-      return res.status(400).json({
-        message: 'Invalid or already used free job code.',
-      });
-    }
-  }
-}
     if (
       !title ||
       !category ||
@@ -174,10 +125,11 @@ if (req.user.role === 'employer') {
     }
 
     if (applicationMethod === 'website' && !applicationLink) {
-  return res.status(400).json({
-    message: 'Application website link is required',
-  });
-}
+      return res.status(400).json({
+        message: 'Application website link is required',
+      });
+    }
+
     let companyLogo = req.user.companyLogo || '';
     let companyLogoPublicId = req.user.companyLogoPublicId || '';
 
@@ -190,21 +142,21 @@ if (req.user.role === 'employer') {
       companyLogo = uploadedLogo.url;
       companyLogoPublicId = uploadedLogo.publicId;
     }
-const riskCheck = detectJobRisk({
-  title,
-  companyName,
-  description,
-  responsibilities,
-  requirements,
-  additionalInformation,
-  applicationInstructions,
-  contactPhone,
-  contactEmail,
-});
-    const job = await Job.create({
 
+    const riskCheck = detectJobRisk({
+      title,
+      companyName,
+      description,
+      responsibilities,
+      requirements,
+      additionalInformation,
+      applicationInstructions,
+      contactPhone,
+      contactEmail,
+    });
+
+    const job = await Job.create({
       employer: req.user._id,
-      jobPostCode: validJobCode?._id || validPaidJobPayment?._id || null,
 
       title,
       category,
@@ -212,7 +164,7 @@ const riskCheck = detectJobRisk({
       jobType,
       salary: salary || '',
       deadline: deadline || null,
-      
+
       companyName,
       industry: industry || '',
       companyWebsite: companyWebsite || '',
@@ -220,16 +172,17 @@ const riskCheck = detectJobRisk({
 
       companyLogo,
       companyLogoPublicId,
-riskFlags: riskCheck.riskFlags,
-riskScore: riskCheck.riskScore,
-requiresManualReview: riskCheck.requiresManualReview,
+
+      riskFlags: riskCheck.riskFlags,
+      riskScore: riskCheck.riskScore,
+      requiresManualReview: riskCheck.requiresManualReview,
 
       description,
-responsibilities: responsibilities || '',
-requirements: requirements || '',
-additionalInformation: additionalInformation || '',
+      responsibilities: responsibilities || '',
+      requirements: requirements || '',
+      additionalInformation: additionalInformation || '',
 
-applicationMethod,
+      applicationMethod,
       applicationEmail: applicationEmail || '',
       applicationLink: applicationLink || '',
       applicationInstructions: applicationInstructions || '',
@@ -238,35 +191,27 @@ applicationMethod,
       contactEmail: contactEmail || '',
       contactPhone: contactPhone || '',
 
-      status: 'pending',
+      status: 'pending_payment',
+      paymentStatus: 'unpaid',
+      paymentAmount: 55,
+      isActive: false,
     });
-const usedUnlock = validJobCode || validPaidJobPayment;
 
-if (usedUnlock) {
-  usedUnlock.isUsed = true;
-  usedUnlock.usedForJob = job._id;
-  usedUnlock.usedAt = new Date();
-  await usedUnlock.save();
-}
+    res.status(201).json({
+      message: 'Job created successfully. Proceed to payment.',
+      job,
+    });
+  } catch (error) {
+    console.error('CREATE JOB ERROR:', error);
 
- 
-
-sendAdminJobAlert(job).catch((emailError) => {
-  console.log('Admin job alert email failed:', emailError.message);
-});
- res.status(201).json({
-  message: 'Job submitted successfully and is pending admin review',
-  job,
-});
- } catch (error) {
-  console.error('CREATE JOB ERROR:', error);
-
-  res.status(500).json({
-    message: 'Failed to create job',
-    error: error.message,
-  });
-}
+    res.status(500).json({
+      message: 'Failed to create job',
+      error: error.message,
+    });
+  }
 };
+
+// @desc    Public users view approved jobs
 
 // @desc    Public users view approved jobs
 // @route   GET /api/jobs
@@ -419,7 +364,17 @@ const approveJob = async (req, res) => {
         message: 'Job not found',
       });
     }
+if (job.paymentStatus !== 'paid') {
+  return res.status(400).json({
+    message: 'This job has not been paid for yet.',
+  });
+}
 
+if (job.status !== 'pending_review') {
+  return res.status(400).json({
+    message: 'Only jobs pending review can be approved.',
+  });
+}
    if (job.requiresManualReview && !req.body.confirmRiskApproval) {
   return res.status(400).json({
     message:
@@ -431,6 +386,7 @@ const approveJob = async (req, res) => {
 job.status = 'approved';
 job.rejectionReason = '';
 job.isActive = true;
+job.approvedAt = new Date();
 
     const updatedJob = await job.save();
 
@@ -461,8 +417,10 @@ const rejectJob = async (req, res) => {
       });
     }
 
-    job.status = 'rejected';
-    job.rejectionReason = rejectionReason || 'No reason provided';
+   job.status = 'rejected';
+job.rejectionReason = rejectionReason || 'No reason provided';
+job.rejectedAt = new Date();
+job.isActive = false;
 
     const updatedJob = await job.save();
 
@@ -545,10 +503,14 @@ const updateJob = async (req, res) => {
     }
 
     // If employer edits an approved/rejected job, send it back for review.
-    if (!isAdmin) {
-      job.status = 'pending';
-      job.rejectionReason = '';
-    }
+   if (!isAdmin) {
+  // Only paid jobs can return to review
+  if (job.paymentStatus === 'paid') {
+    job.status = 'pending_review';
+  }
+
+  job.rejectionReason = '';
+}
 const riskCheck = detectJobRisk(job);
 
 job.riskFlags = riskCheck.riskFlags;
@@ -641,11 +603,19 @@ const updateJobStatus = async (req, res) => {
   try {
     const { status, rejectionReason } = req.body;
 
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
-      return res.status(400).json({
-        message: 'Invalid job status',
-      });
-    }
+     if (
+  ![
+    'pending_payment',
+    'pending_review',
+    'approved',
+    'rejected',
+    'expired',
+  ].includes(status)
+) {
+  return res.status(400).json({
+    message: 'Invalid job status',
+  });
+}
 
     const job = await Job.findById(req.params.id);
 
@@ -666,7 +636,7 @@ const updateJobStatus = async (req, res) => {
       job.rejectionReason = rejectionReason || 'No reason provided';
     }
 
-    if (status === 'pending') {
+    if (status === 'pending_review') {
       job.rejectionReason = '';
     }
 

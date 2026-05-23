@@ -201,11 +201,50 @@ const jobSchema = new mongoose.Schema(
       trim: true,
     },
 
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
-    },
+   status: {
+  type: String,
+  enum: [
+    'draft',
+    'pending_payment',
+    'pending_review',
+    'approved',
+    'rejected',
+    'expired',
+  ],
+  default: 'pending_payment',
+},
+
+paymentStatus: {
+  type: String,
+  enum: ['unpaid', 'pending', 'paid', 'failed'],
+  default: 'unpaid',
+},
+
+paymentReference: {
+  type: String,
+  default: '',
+},
+
+paymentAmount: {
+  type: Number,
+  default: 55,
+},
+
+paidAt: {
+  type: Date,
+},
+
+submittedForReviewAt: {
+  type: Date,
+},
+
+approvedAt: {
+  type: Date,
+},
+
+rejectedAt: {
+  type: Date,
+},
 views: {
   type: Number,
   default: 0,
@@ -228,7 +267,10 @@ requiresManualReview: {
       type: String,
       default: '',
     },
-
+resubmissionCount: {
+  type: Number,
+  default: 0,
+},
     isActive: {
       type: Boolean,
       default: true,

@@ -2,8 +2,9 @@ const express = require('express');
 const axios = require('axios');
 
 const User = require('../models/User');
-const JobPostCode = require('../models/JobPostCode');
+ 
 const { protect } = require('../middleware/authMiddleware');
+const Job = require('../models/Job');
 
 const router = express.Router();
 
@@ -28,22 +29,37 @@ router.post('/hubtel/job-post/pay', protect, async (req, res) => {
       });
     }
 
-    const reference = `JOBLYHUB_JOB_${Date.now()}_${Math.floor(
-      Math.random() * 10000
-    )}`;
+  const { jobId } = req.body;
 
+if (!jobId) {
+  return res.status(400).json({
+    message: 'Job ID is required',
+  });
+}
+
+const job = await Job.findById(jobId);
+
+if (!job) {
+  return res.status(404).json({
+    message: 'Job not found',
+  });
+}
+
+if (job.employer.toString() !== req.user._id.toString()) {
+  return res.status(403).json({
+    message: 'Not authorized for this job',
+  });
+}
+
+const reference = `JOBLYHUB_JOB_${job._id}_${Date.now()}`;
     const authHeader = Buffer.from(
       `${process.env.HUBTEL_CLIENT_ID}:${process.env.HUBTEL_CLIENT_SECRET}`
     ).toString('base64');
 
-    await JobPostCode.create({
-      employer: user._id,
-      amount: JOB_POST_FEE,
-      paymentReference: reference,
-      paymentStatus: 'pending',
-      code: reference,
-      isUsed: false,
-    });
+  job.paymentReference = reference;
+job.paymentStatus = 'pending';
+
+await job.save();
 
     const payload = {
       totalAmount: JOB_POST_FEE,
@@ -72,10 +88,8 @@ router.post('/hubtel/job-post/pay', protect, async (req, res) => {
     const checkoutUrl = response.data?.data?.checkoutUrl;
 
     if (!checkoutUrl) {
-      await JobPostCode.findOneAndUpdate(
-        { paymentReference: reference },
-        { paymentStatus: 'failed' }
-      );
+     job.paymentStatus = 'failed';
+await job.save();
 
       return res.status(500).json({
         message: 'No checkout URL returned from Hubtel',
@@ -126,11 +140,11 @@ router.post('/hubtel/job-post/callback', async (req, res) => {
       });
     }
 
-    const paymentRecord = await JobPostCode.findOne({
-      paymentReference: reference,
-    });
+   const job = await Job.findOne({
+  paymentReference: reference,
+});
 
-    if (!paymentRecord) {
+  if (!job) {
       return res.status(404).json({
         message: 'Payment record not found',
       });
@@ -143,16 +157,20 @@ router.post('/hubtel/job-post/callback', async (req, res) => {
       String(status) === '0000';
 
     if (!paid) {
-      paymentRecord.paymentStatus = 'failed';
-      await paymentRecord.save();
+    job.paymentStatus = 'failed';
+await job.save();
 
       return res.status(200).json({
         message: 'Payment not successful',
       });
     }
 
-    paymentRecord.paymentStatus = 'completed';
-    await paymentRecord.save();
+    job.paymentStatus = 'paid';
+job.status = 'pending_review';
+job.paidAt = new Date();
+job.submittedForReviewAt = new Date();
+
+await job.save();
 
 
     return res.status(200).json({
@@ -171,12 +189,12 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
   try {
     const { reference } = req.params;
 
-    const paymentRecord = await JobPostCode.findOne({
+    const job = await Job.findOne({
       employer: req.user._id,
       paymentReference: reference,
     });
 
-    if (!paymentRecord) {
+    if (!job) {
       return res.status(404).json({
         message: 'Payment record not found',
       });
@@ -184,10 +202,11 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
 
     return res.json({
       success: true,
-      paymentReference: paymentRecord.paymentReference,
-      paymentStatus: paymentRecord.paymentStatus,
-      isUsed: paymentRecord.isUsed,
-      amount: paymentRecord.amount,
+      paymentReference: job.paymentReference,
+      paymentStatus: job.paymentStatus,
+      jobStatus: job.status,
+      amount: job.paymentAmount,
+      jobId: job._id,
     });
   } catch (error) {
     return res.status(500).json({
@@ -196,57 +215,6 @@ router.get('/job-post/status/:reference', protect, async (req, res) => {
     });
   }
 });
-
-router.get('/job-post/available-unlock', protect, async (req, res) => {
-  try {
-    const availablePaidUnlock = await JobPostCode.findOne({
-      employer: req.user._id,
-      paymentStatus: 'completed',
-      isUsed: false,
-      amount: JOB_POST_FEE,
-    }).sort({ createdAt: -1 });
-
-    const availableFreeCode = await JobPostCode.findOne({
-      employer: req.user._id,
-      paymentStatus: 'completed',
-      isUsed: false,
-      amount: 0,
-    }).sort({ createdAt: -1 });
-
-    res.json({
-      hasAvailablePaidUnlock: !!availablePaidUnlock,
-      hasAvailableFreeCode: !!availableFreeCode,
-
-      paidUnlockReference:
-        availablePaidUnlock?.paymentReference || null,
-
-      freeCode:
-        availableFreeCode?.code || null,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: 'Failed to check available unlocks',
-      error: error.message,
-    });
-  }
-});
-
-router.get('/job-post/my-codes', protect, async (req, res) => {
-  try {
-    const codes = await JobPostCode.find({
-      employer: req.user._id,
-      paymentStatus: 'completed',
-    })
-      .populate('usedForJob', 'title status createdAt')
-      .sort({ createdAt: -1 });
-
-    res.json(codes);
-  } catch (error) {
-    res.status(500).json({
-      message: 'Failed to fetch job post codes',
-      error: error.message,
-    });
-  }
-});
-
+ 
+ 
 module.exports = router;
