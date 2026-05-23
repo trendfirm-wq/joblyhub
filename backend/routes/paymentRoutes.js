@@ -51,7 +51,9 @@ if (job.employer.toString() !== req.user._id.toString()) {
   });
 }
 
-const reference = `JOBLYHUB_JOB_${job._id}_${Date.now()}`;
+const reference = `JH${Date.now().toString().slice(-10)}${Math.floor(
+  Math.random() * 90 + 10
+)}`;
     const authHeader = Buffer.from(
       `${process.env.HUBTEL_CLIENT_ID}:${process.env.HUBTEL_CLIENT_SECRET}`
     ).toString('base64');
