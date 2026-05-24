@@ -191,10 +191,19 @@ const createJob = async (req, res) => {
       contactEmail: contactEmail || '',
       contactPhone: contactPhone || '',
 
-      status: 'pending_payment',
-      paymentStatus: 'unpaid',
-      paymentAmount: 55,
-      isActive: false,
+     status: req.user.canPostFree
+  ? 'pending_review'
+  : 'pending_payment',
+
+paymentStatus: req.user.canPostFree
+  ? 'paid'
+  : 'unpaid',
+
+paymentAmount: req.user.canPostFree
+  ? 0
+  : 55,
+
+isActive: false,
     });
 
     res.status(201).json({
