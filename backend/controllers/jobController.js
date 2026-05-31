@@ -229,16 +229,9 @@ const getApprovedJobs = async (req, res) => {
   try {
     const { category, location, jobType, search } = req.query;
 
-  const now = new Date();
-
-const filter = {
+  const filter = {
   status: 'approved',
   isActive: true,
-  $or: [
-    { deadline: { $exists: false } },
-    { deadline: null },
-    { deadline: { $gte: now } },
-  ],
 };
 
     if (category) {
