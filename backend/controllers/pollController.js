@@ -1,12 +1,12 @@
 const PollVote = require('../models/PollVote');
 
-const HOME_JOB_STATUS_POLL = 'home-job-status';
+const HOME_JOB_HUNTING_DURATION_POLL = 'home-job-hunting-duration';
 
 const pollOptions = [
-  'Actively looking',
-  'Open to opportunities',
-  'Not looking',
-  'Just browsing',
+  'Less than 1 month',
+  '1–3 months',
+  '3–6 months',
+  'Over 6 months',
 ];
 
 const buildResults = (votes) => {
@@ -24,23 +24,26 @@ const buildResults = (votes) => {
   return results;
 };
 
-const getHomeJobStatusPoll = async (req, res) => {
+const getHomeJobHuntingDurationPoll = async (req, res) => {
   try {
     const guestId = req.query.guestId || '';
-    const votes = await PollVote.find({ pollKey: HOME_JOB_STATUS_POLL });
+
+    const votes = await PollVote.find({
+      pollKey: HOME_JOB_HUNTING_DURATION_POLL,
+    });
 
     let userVote = '';
 
     if (req.user?._id) {
       const existingVote = await PollVote.findOne({
-        pollKey: HOME_JOB_STATUS_POLL,
+        pollKey: HOME_JOB_HUNTING_DURATION_POLL,
         user: req.user._id,
       });
 
       userVote = existingVote?.option || '';
     } else if (guestId) {
       const existingVote = await PollVote.findOne({
-        pollKey: HOME_JOB_STATUS_POLL,
+        pollKey: HOME_JOB_HUNTING_DURATION_POLL,
         guestId,
       });
 
@@ -49,7 +52,7 @@ const getHomeJobStatusPoll = async (req, res) => {
 
     res.json({
       success: true,
-      pollKey: HOME_JOB_STATUS_POLL,
+      pollKey: HOME_JOB_HUNTING_DURATION_POLL,
       options: pollOptions,
       results: buildResults(votes),
       totalVotes: votes.length,
@@ -64,7 +67,7 @@ const getHomeJobStatusPoll = async (req, res) => {
   }
 };
 
-const voteHomeJobStatusPoll = async (req, res) => {
+const voteHomeJobHuntingDurationPoll = async (req, res) => {
   try {
     const { option, guestId } = req.body;
 
@@ -84,23 +87,23 @@ const voteHomeJobStatusPoll = async (req, res) => {
 
     const filter = req.user?._id
       ? {
-          pollKey: HOME_JOB_STATUS_POLL,
+          pollKey: HOME_JOB_HUNTING_DURATION_POLL,
           user: req.user._id,
         }
       : {
-          pollKey: HOME_JOB_STATUS_POLL,
+          pollKey: HOME_JOB_HUNTING_DURATION_POLL,
           guestId,
         };
 
     const update = req.user?._id
       ? {
-          pollKey: HOME_JOB_STATUS_POLL,
+          pollKey: HOME_JOB_HUNTING_DURATION_POLL,
           user: req.user._id,
           guestId: '',
           option,
         }
       : {
-          pollKey: HOME_JOB_STATUS_POLL,
+          pollKey: HOME_JOB_HUNTING_DURATION_POLL,
           user: null,
           guestId,
           option,
@@ -112,7 +115,9 @@ const voteHomeJobStatusPoll = async (req, res) => {
       runValidators: true,
     });
 
-    const votes = await PollVote.find({ pollKey: HOME_JOB_STATUS_POLL });
+    const votes = await PollVote.find({
+      pollKey: HOME_JOB_HUNTING_DURATION_POLL,
+    });
 
     res.json({
       success: true,
@@ -131,6 +136,6 @@ const voteHomeJobStatusPoll = async (req, res) => {
 };
 
 module.exports = {
-  getHomeJobStatusPoll,
-  voteHomeJobStatusPoll,
+  getHomeJobHuntingDurationPoll,
+  voteHomeJobHuntingDurationPoll,
 };
