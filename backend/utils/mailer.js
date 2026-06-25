@@ -1,17 +1,11 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendJobApprovalEmail = async (job) => {
-  const mailOptions = {
-    from: `"JoblyHub System" <${process.env.EMAIL_USER}>`,
-    to: process.env.ADMIN_EMAIL,
+  await resend.emails.send({
+    from: 'JoblyHub <business@joblyhub.com>',
+    to: process.env.ADMIN_EMAIL, // your test email or admin email
     subject: `New Job Approved: ${job.title}`,
     html: `
       <h2>Job Approved</h2>
@@ -33,16 +27,7 @@ const sendJobApprovalEmail = async (job) => {
         </a>
       </p>
     `,
-  };
-
-console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL);
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('Sending approval email...');
-console.log('MAIL OPTIONS:', mailOptions);
-const info = await transporter.sendMail(mailOptions);
-
-console.log('EMAIL SENT SUCCESSFULLY');
-console.log(info.response);
+  });
 };
 
 module.exports = {
