@@ -35,7 +35,14 @@ const sendJobApprovalEmail = async (job) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL);
+console.log('EMAIL_USER:', process.env.EMAIL_USER);
+console.log('Sending approval email...');
+
+const info = await transporter.sendMail(mailOptions);
+
+console.log('EMAIL SENT SUCCESSFULLY');
+console.log(info.response);
 };
 
 module.exports = {
