@@ -1,6 +1,6 @@
 const Job = require('../models/Job');
 const cloudinary = require('../config/cloudinary');
- 
+ const { sendJobApprovalEmail } = require('../utils/mailer');
 
 const uploadImageToCloudinary = async (file, folder) => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
@@ -391,7 +391,11 @@ job.isActive = true;
 job.approvedAt = new Date();
 
     const updatedJob = await job.save();
-
+try {
+  await sendJobApprovalEmail(updatedJob);
+} catch (emailError) {
+  console.error('EMAIL ERROR:', emailError.message);
+}
     res.json({
       message: 'Job approved successfully',
       job: updatedJob,
