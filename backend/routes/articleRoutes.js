@@ -1,6 +1,17 @@
+const express = require('express');
+const router = express.Router();
+
 const multer = require('multer');
 const streamifier = require('streamifier');
 const cloudinary = require('../config/cloudinary');
+
+const {
+  createArticle,
+  getArticles,
+  getArticle,
+  updateArticle,
+  deleteArticle,
+} = require('../controllers/articleController');
 
 const storage = multer.memoryStorage();
 
