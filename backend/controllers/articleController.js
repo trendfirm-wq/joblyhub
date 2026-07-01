@@ -2,6 +2,7 @@ const Article = require('../models/Article');
 const slugify = require('slugify');
 // Create Article
 exports.createArticle = async (req, res) => {
+   console.log(req.body);
   try {
     let slug = slugify(req.body.title, {
       lower: true,
