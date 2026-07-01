@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
-
+const articleRoutes = require('./routes/articleRoutes');
 dotenv.config();
 
 connectDB();
@@ -76,7 +76,11 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/polls', require('./routes/pollRoutes'));
 app.use('/api/fraud-reports', require('./routes/fraudReportRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
-
+app.use('/api/articles', articleRoutes);
+app.use(
+    '/api/article-upload',
+    require('./routes/articleUploadRoutes')
+);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
