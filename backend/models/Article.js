@@ -22,42 +22,11 @@ const articleSchema = new mongoose.Schema(
       required: true,
     },
 
-   content: [
-  {
-    type: {
+    content: {
       type: String,
-      enum: [
-        'heading',
-        'paragraph',
-        'image',
-        'quote',
-        'list',
-        'table',
-        'callout',
-        'video',
-        'divider',
-      ],
       required: true,
     },
 
-    heading: String,
-    body: String,
-
-    src: String,
-    alt: String,
-    caption: String,
-
-    variant: String,
-
-    list: [String],
-
-    columns: [String],
-
-    rows: [[String]],
-
-    embed: String,
-  },
-],
     coverImage: {
       type: String,
       default: '',

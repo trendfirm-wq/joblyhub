@@ -1,18 +1,46 @@
 const Article = require('../models/Article');
-
+const slugify = require('slugify');
 // Create Article
 exports.createArticle = async (req, res) => {
   try {
-    const article = await Article.create(req.body);
+    let slug = slugify(req.body.title, {
+      lower: true,
+      strict: true,
+    });
+
+    const existing = await Article.findOne({ slug });
+
+    if (existing) {
+      slug = `${slug}-${Date.now()}`;
+    }
+
+    const article = await Article.create({
+      title: req.body.title,
+      slug,
+      excerpt: req.body.excerpt,
+      content: req.body.content,
+      coverImage: req.body.coverImage,
+      category: req.body.category,
+      status: req.body.status || 'draft',
+      author: 'JoblyHub',
+      publishedAt:
+        req.body.status === 'published'
+          ? new Date()
+          : null,
+    });
 
     res.status(201).json(article);
+
   } catch (err) {
+
+    console.error(err);
+
     res.status(500).json({
       message: err.message,
     });
+
   }
 };
-
 // Get All Published Articles
 exports.getArticles = async (req, res) => {
   try {
