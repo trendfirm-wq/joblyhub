@@ -22,11 +22,24 @@ const articleSchema = new mongoose.Schema(
       required: true,
     },
 
-    content: {
+   blocks: [
+  {
+    id: {
       type: String,
       required: true,
     },
 
+    type: {
+      type: String,
+      required: true,
+    },
+
+    data: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+  },
+],
     coverImage: {
       type: String,
       default: '',

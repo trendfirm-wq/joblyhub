@@ -15,20 +15,20 @@ exports.createArticle = async (req, res) => {
       slug = `${slug}-${Date.now()}`;
     }
 
-    const article = await Article.create({
-      title: req.body.title,
-      slug,
-      excerpt: req.body.excerpt,
-      content: req.body.content,
-      coverImage: req.body.coverImage,
-      category: req.body.category,
-      status: req.body.status || 'draft',
-      author: 'JoblyHub',
-      publishedAt:
-        req.body.status === 'published'
-          ? new Date()
-          : null,
-    });
+  const article = await Article.create({
+  title: req.body.title,
+  slug,
+  excerpt: req.body.excerpt,
+  blocks: req.body.blocks || [],
+  coverImage: req.body.coverImage,
+  category: req.body.category,
+  status: req.body.status || "draft",
+  author: "JoblyHub",
+  publishedAt:
+    req.body.status === "published"
+      ? new Date()
+      : null,
+});
 
     res.status(201).json(article);
 
