@@ -77,10 +77,7 @@ app.use('/api/polls', require('./routes/pollRoutes'));
 app.use('/api/fraud-reports', require('./routes/fraudReportRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/articles', articleRoutes);
-app.use(
-    '/api/article-upload',
-    require('./routes/articleUploadRoutes')
-);
+ 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
