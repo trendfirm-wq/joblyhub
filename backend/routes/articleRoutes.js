@@ -9,6 +9,7 @@ const {
   createArticle,
   getArticles,
   getArticle,
+  getArticleById,
   updateArticle,
   deleteArticle,
 } = require('../controllers/articleController');
@@ -56,14 +57,22 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 });
 
 // CRUD Routes
+// List articles
 router.get('/', getArticles);
 
-router.get('/:slug', getArticle);
-
+// Create article
 router.post('/', createArticle);
 
+// Editor (load article by Mongo ID)
+router.get('/edit/:id', getArticleById);
+
+// Public article (load by slug)
+router.get('/:slug', getArticle);
+
+// Update article
 router.put('/:id', updateArticle);
 
+// Delete article
 router.delete('/:id', deleteArticle);
 
 module.exports = router;

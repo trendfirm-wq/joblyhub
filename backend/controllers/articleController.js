@@ -43,22 +43,59 @@ exports.createArticle = async (req, res) => {
   }
 };
 // Get All Published Articles
+// Get Articles
 exports.getArticles = async (req, res) => {
   try {
-    const articles = await Article.find({
-      status: 'published',
-    }).sort({
-      publishedAt: -1,
-    });
+
+    const status = req.query.status;
+
+    const filter = {};
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    const sort =
+      status === "published"
+        ? { publishedAt: -1 }
+        : { updatedAt: -1 };
+
+    const articles = await Article.find(filter).sort(sort);
 
     res.json(articles);
+
   } catch (err) {
+
     res.status(500).json({
       message: err.message,
     });
+
   }
 };
+// Get Article By ID
+exports.getArticleById = async (req, res) => {
+  try {
 
+    const article = await Article.findById(
+      req.params.id
+    );
+
+    if (!article) {
+      return res.status(404).json({
+        message: "Article not found",
+      });
+    }
+
+    res.json(article);
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: err.message,
+    });
+
+  }
+};
 // Get One Article by Slug
 exports.getArticle = async (req, res) => {
   try {
@@ -84,24 +121,46 @@ exports.getArticle = async (req, res) => {
 };
 
 // Update Article
+// Update Article
 exports.updateArticle = async (req, res) => {
   try {
-    const article = await Article.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-      }
+
+    const article = await Article.findById(
+      req.params.id
     );
 
+    if (!article) {
+      return res.status(404).json({
+        message: "Article not found",
+      });
+    }
+
+    article.title = req.body.title;
+    article.excerpt = req.body.excerpt;
+    article.category = req.body.category;
+    article.coverImage = req.body.coverImage;
+    article.blocks = req.body.blocks;
+    article.status = req.body.status;
+
+    if (
+      req.body.status === "published" &&
+      !article.publishedAt
+    ) {
+      article.publishedAt = new Date();
+    }
+
+    await article.save();
+
     res.json(article);
+
   } catch (err) {
+
     res.status(500).json({
       message: err.message,
     });
+
   }
 };
-
 // Delete Article
 exports.deleteArticle = async (req, res) => {
   try {
