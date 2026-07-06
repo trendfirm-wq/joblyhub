@@ -118,7 +118,6 @@ const voteHomeJobHuntingDurationPoll = async (req, res) => {
     const votes = await PollVote.find({
       pollKey: HOME_JOB_HUNTING_DURATION_POLL,
     });
-k
     res.json({
       success: true,
       message: 'Vote recorded successfully',
