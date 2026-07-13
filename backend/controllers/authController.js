@@ -44,6 +44,10 @@ const formatUserResponse = (user) => {
     companyDescription: user.companyDescription,
     companyLogo: user.companyLogo,
 
+    isEmployerVerified: user.isEmployerVerified,
+    employerVerificationStatus: user.employerVerificationStatus,
+    employerVerificationNote: user.employerVerificationNote,
+
     location: user.location,
     preferredJobCategory: user.preferredJobCategory,
     highestQualification: user.highestQualification,
@@ -63,6 +67,7 @@ const formatUserResponse = (user) => {
     token: generateToken(user._id, user.tokenVersion),
   };
 };
+
 const generateJobCode = () => {
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `JOBLY-${random}`;
