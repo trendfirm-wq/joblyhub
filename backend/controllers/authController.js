@@ -160,6 +160,14 @@ const registerUser = async (req, res) => {
       companyDescription: selectedRole === 'employer' ? companyDescription || '' : '',
       companyLogo: selectedRole === 'employer' ? companyLogo || '' : '',
 
+      isEmployerVerified:
+  selectedRole === "employer" ? false : true,
+
+employerVerificationStatus:
+  selectedRole === "employer"
+    ? "pending"
+    : "verified",
+    
       location: selectedRole === 'job_seeker' ? location || '' : '',
       preferredJobCategory: selectedRole === 'job_seeker' ? preferredJobCategory || '' : '',
       highestQualification: selectedRole === 'job_seeker' ? highestQualification || '' : '',
