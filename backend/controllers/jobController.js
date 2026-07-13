@@ -529,9 +529,25 @@ const updateJob = async (req, res) => {
     }
 
     // If employer edits an approved/rejected job, send it back for review.
-   if (!isAdmin) {
-  // Only paid jobs can return to review
-  if (job.paymentStatus === 'paid') {
+if (!isAdmin) {
+
+  // Employer clicked Save Draft
+  if (saveAsDraft) {
+    job.status = 'draft';
+  }
+
+  // Employer clicked Continue to Payment
+  else if (
+    job.status === 'draft' &&
+    job.paymentStatus === 'unpaid'
+  ) {
+    job.status = req.user.canPostFree
+      ? 'pending_review'
+      : 'pending_payment';
+  }
+
+  // Editing an already paid job
+  else if (job.paymentStatus === 'paid') {
     job.status = 'pending_review';
   }
 
