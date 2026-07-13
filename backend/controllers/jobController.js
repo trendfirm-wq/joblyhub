@@ -468,7 +468,7 @@ job.isActive = false;
 const updateJob = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
-
+     const { saveAsDraft } = req.body;
     if (!job) {
       return res.status(404).json({
         message: 'Job not found',
