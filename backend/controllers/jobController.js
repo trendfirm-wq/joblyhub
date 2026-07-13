@@ -94,6 +94,7 @@ const createJob = async (req, res) => {
       contactName,
       contactEmail,
       contactPhone,
+      saveAsDraft,
     } = req.body;
 
     if (req.user.role === 'employer' && !req.user.isEmployerVerified) {
@@ -102,21 +103,34 @@ const createJob = async (req, res) => {
           'Your employer account is not verified yet. Please wait for admin approval before posting jobs.',
       });
     }
+if (!saveAsDraft) {
+  if (
+    !title ||
+    !category ||
+    !location ||
+    !jobType ||
+    !companyName ||
+    !description ||
+    !applicationMethod
+  ) {
+    return res.status(400).json({
+      message:
+        'Please provide title, category, location, job type, company name, description and application method',
+    });
+  }
 
-    if (
-      !title ||
-      !category ||
-      !location ||
-      !jobType ||
-      !companyName ||
-      !description ||
-      !applicationMethod
-    ) {
-      return res.status(400).json({
-        message:
-          'Please provide title, category, location, job type, company name, description and application method',
-      });
-    }
+  if (applicationMethod === 'email' && !applicationEmail) {
+    return res.status(400).json({
+      message: 'Application email is required',
+    });
+  }
+
+  if (applicationMethod === 'website' && !applicationLink) {
+    return res.status(400).json({
+      message: 'Application website link is required',
+    });
+  }
+}
 
     if (applicationMethod === 'email' && !applicationEmail) {
       return res.status(400).json({
@@ -191,13 +205,17 @@ const createJob = async (req, res) => {
       contactEmail: contactEmail || '',
       contactPhone: contactPhone || '',
 
-     status: req.user.canPostFree
-  ? 'pending_review'
-  : 'pending_payment',
+     status: saveAsDraft
+  ? 'draft'
+  : req.user.canPostFree
+      ? 'pending_review'
+      : 'pending_payment',
 
-paymentStatus: req.user.canPostFree
-  ? 'paid'
-  : 'unpaid',
+paymentStatus: saveAsDraft
+  ? 'unpaid'
+  : req.user.canPostFree
+      ? 'paid'
+      : 'unpaid',
 
 paymentAmount: req.user.canPostFree
   ? 0
@@ -207,9 +225,11 @@ isActive: false,
     });
 
     res.status(201).json({
-      message: 'Job created successfully. Proceed to payment.',
-      job,
-    });
+  message: saveAsDraft
+    ? 'Draft saved successfully.'
+    : 'Job created successfully. Proceed to payment.',
+  job,
+});
   } catch (error) {
     console.error('CREATE JOB ERROR:', error);
 
