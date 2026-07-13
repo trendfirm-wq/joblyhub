@@ -12,7 +12,8 @@ const {
   getArticleById,
   updateArticle,
   deleteArticle,
-} = require('../controllers/articleController');
+  incrementArticleViews,
+} = require("../controllers/articleController");
 
 const storage = multer.memoryStorage();
 
@@ -68,7 +69,10 @@ router.get('/edit/:id', getArticleById);
 
 // Public article (load by slug)
 router.get('/:slug', getArticle);
-
+router.post(
+  "/:slug/view",
+  incrementArticleViews
+);
 // Update article
 router.put('/:id', updateArticle);
 

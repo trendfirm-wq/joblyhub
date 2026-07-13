@@ -42,11 +42,8 @@ exports.createArticle = async (req, res) => {
 
   }
 };
-// Get All Published Articles
-// Get Articles
 exports.getArticles = async (req, res) => {
   try {
-
     const status = req.query.status;
 
     const filter = {};
@@ -60,16 +57,53 @@ exports.getArticles = async (req, res) => {
         ? { publishedAt: -1 }
         : { updatedAt: -1 };
 
-    const articles = await Article.find(filter).sort(sort);
+    const articles = await Article.find(filter)
+      .select(
+        "title slug excerpt coverImage category author publishedAt featured"
+      )
+      .sort(sort)
+      .lean();
 
     res.json(articles);
-
   } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+// Increment Article Views
+exports.incrementArticleViews = async (req, res) => {
+  try {
+    const article = await Article.findOneAndUpdate(
+      {
+        slug: req.params.slug,
+      },
+      {
+        $inc: {
+          views: 1,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!article) {
+      return res.status(404).json({
+        message: "Article not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      views: article.views,
+    });
+  } catch (err) {
+    console.error(err);
 
     res.status(500).json({
       message: err.message,
     });
-
   }
 };
 // Get Article By ID
@@ -97,30 +131,59 @@ exports.getArticleById = async (req, res) => {
   }
 };
 // Get One Article by Slug
+// Get One Article by Slug
 exports.getArticle = async (req, res) => {
   try {
     const article = await Article.findOne({
       slug: req.params.slug,
-    });
+    }).lean();
 
     if (!article) {
       return res.status(404).json({
-        message: 'Article not found',
+        message: "Article not found",
       });
     }
 
-    article.views += 1;
-    await article.save();
+    // Calculate reading time
+    const text = (article.blocks || [])
+      .map((block) => {
+        if (block.data?.text) return block.data.text;
+        return "";
+      })
+      .join(" ");
+
+    const words = text
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
+
+    article.readingTime = Math.max(
+      1,
+      Math.ceil(words / 200)
+    );
+
+    // Related articles
+    article.related = await Article.find({
+      category: article.category,
+      slug: { $ne: article.slug },
+      status: "published",
+    })
+      .select(
+        "title slug coverImage excerpt publishedAt category"
+      )
+      .sort({ publishedAt: -1 })
+      .limit(3)
+      .lean();
 
     res.json(article);
   } catch (err) {
+    console.error(err);
+
     res.status(500).json({
       message: err.message,
     });
   }
 };
-
-// Update Article
 // Update Article
 exports.updateArticle = async (req, res) => {
   try {
