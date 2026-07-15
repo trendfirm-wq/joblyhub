@@ -29,11 +29,11 @@ app.use(
       'https://joblyhub.com',
       'https://www.joblyhub.com',
       'https://jobblyhub.netlify.app',
+      'https://joblyhub-web.vercel.app', // <-- Add this
     ],
     credentials: true,
   })
 );
-
 // Body parser MUST come before routes and rate limit routes
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
