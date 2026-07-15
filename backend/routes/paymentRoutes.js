@@ -68,8 +68,8 @@ await job.save();
       totalAmount: JOB_POST_FEE,
       description: 'JoblyHub job posting fee',
       callbackUrl: process.env.HUBTEL_CALLBACK_URL,
-      returnUrl: `${process.env.FRONTEND_URL}/employer/payment-success/${reference}`,
-      cancellationUrl: `${process.env.FRONTEND_URL}/employer/payment-cancelled/${reference}`,
+     returnUrl: `${process.env.FRONTEND_URL}/employer/payment-success/${job._id}`,
+cancellationUrl: `${process.env.FRONTEND_URL}/employer/payment-cancelled/${job._id}`,
       merchantAccountNumber:
         process.env.HUBTEL_MERCHANT_ID ||
         process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER,
